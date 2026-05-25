@@ -112,3 +112,7 @@ Focused test files cover:
 - [Examples](./examples/README.md)
 
 The examples directory includes both a self-contained walkthrough and a provider-backed OpenAI example.
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
