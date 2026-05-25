@@ -3,16 +3,15 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from .backends import ServiceContainer
 from .config import Settings
-from .models import ConsolidationJob
-from .service import MemoryService
+from .runtime import build_default_service
+from .service import GistLatticeService
 
 logger = logging.getLogger(__name__)
 
 
 class ConsolidationWorker:
-    def __init__(self, service: MemoryService) -> None:
+    def __init__(self, service: GistLatticeService) -> None:
         self.service = service
 
     async def process_once(self, timeout_seconds: int = 1) -> bool:
@@ -21,7 +20,7 @@ class ConsolidationWorker:
             return False
         raw_job = job.model_dump_json()
         try:
-            await self.service.consolidate(job)
+            await self.service.consolidate(job.job_id)
         except Exception:
             logger.exception(
                 "consolidation_failed",
@@ -49,9 +48,9 @@ class ConsolidationWorker:
 
 async def run_worker(settings: Settings | None = None) -> None:
     runtime_settings = settings or Settings.from_env()
-    container = ServiceContainer.from_settings(runtime_settings)
+    service = build_default_service(runtime_settings)
+    container = service.container
     await container.ensure_ready()
-    service = MemoryService(container)
     worker = ConsolidationWorker(service)
     try:
         await worker.run_forever()

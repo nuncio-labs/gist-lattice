@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GistLattice Docs</title>
+    <meta
+      name="description"
+      content="GistLattice is a Python memory management library for agents and long-lived apps."
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe7;
+        --bg-soft: #fffaf2;
+        --panel: rgba(255, 255, 255, 0.78);
+        --panel-strong: #fffdf8;
+        --text: #1f2430;
+        --muted: #5b6475;
+        --border: rgba(31, 36, 48, 0.12);
+        --accent: #214e66;
+        --accent-2: #8b5e34;
+        --shadow: 0 24px 80px rgba(30, 41, 59, 0.14);
+        --radius: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(33, 78, 102, 0.14), transparent 35%),
+          radial-gradient(circle at top right, rgba(139, 94, 52, 0.12), transparent 28%),
+          linear-gradient(180deg, var(--bg), #fbf7f0 45%, #f7f2ea 100%);
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .shell {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 32px 20px 72px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+        gap: 22px;
+        align-items: stretch;
+        margin-bottom: 22px;
+      }
+
+      .panel {
+        background: var(--panel);
+        backdrop-filter: blur(18px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-main {
+        padding: 34px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        gap: 10px;
+        align-items: center;
+        font-size: 0.78rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent-2);
+        margin-bottom: 18px;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent-2);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.1;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 5vw, 4.6rem);
+        max-width: 11ch;
+        letter-spacing: -0.05em;
+      }
+
+      .lede {
+        margin: 18px 0 0;
+        max-width: 62ch;
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 26px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel-strong);
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #fff;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .stat {
+        padding: 22px;
+      }
+
+      .stat-label {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin-top: 8px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+        gap: 22px;
+      }
+
+      .toc {
+        position: sticky;
+        top: 20px;
+        align-self: start;
+        padding: 20px;
+      }
+
+      .toc h2 {
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+
+      .toc nav {
+        display: grid;
+        gap: 8px;
+      }
+
+      .toc a {
+        display: block;
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: var(--text);
+        border: 1px solid transparent;
+      }
+
+      .toc a:hover {
+        background: rgba(33, 78, 102, 0.06);
+        border-color: rgba(33, 78, 102, 0.12);
+        text-decoration: none;
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      section {
+        padding: 26px 28px;
+      }
+
+      section h2 {
+        font-size: 1.55rem;
+        margin-bottom: 14px;
+        letter-spacing: -0.03em;
+      }
+
+      section p,
+      section li {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .callout {
+        display: grid;
+        gap: 10px;
+        padding: 18px 20px;
+        border-left: 4px solid var(--accent);
+        background: rgba(33, 78, 102, 0.05);
+        border-radius: 16px;
+      }
+
+      .code {
+        margin: 16px 0 0;
+        overflow: auto;
+        border-radius: 18px;
+        background: #18202d;
+        color: #e8edf7;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px 20px;
+        font-size: 0.92rem;
+        line-height: 1.65;
+        overflow-x: auto;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        overflow: hidden;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--border);
+      }
+
+      th {
+        background: rgba(33, 78, 102, 0.05);
+        color: var(--text);
+        font-size: 0.92rem;
+      }
+
+      td {
+        background: rgba(255, 255, 255, 0.4);
+        color: var(--muted);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.65);
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .footer {
+        margin-top: 22px;
+        padding: 18px 22px;
+        color: var(--muted);
+        font-size: 0.95rem;
+        text-align: center;
+      }
+
+      .kbd {
+        display: inline-block;
+        padding: 2px 7px;
+        border: 1px solid var(--border);
+        border-bottom-width: 2px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--text);
+        font-size: 0.88em;
+      }
+
+      @media (max-width: 960px) {
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .toc {
+          position: static;
+        }
+
+        .hero-main,
+        section {
+          padding: 22px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .shell {
+          padding: 18px 14px 56px;
+        }
+
+        h1 {
+          max-width: 100%;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        table,
+        pre {
+          font-size: 0.88rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="hero">
+        <div class="panel hero-main">
+          <div class="eyebrow">GistLattice Documentation</div>
+          <h1>Memory infrastructure for Python agents.</h1>
+          <p class="lede">
+            GistLattice is a core-only Python library for retrieval, hydration, and consolidation of long-lived
+            memory. It is designed to stay in-process, stay provider-agnostic, and stay small enough to embed in
+            your own agent loop.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#quick-start">Quick Start</a>
+            <a class="button" href="#public-surface">Public Surface</a>
+            <a class="button" href="#backends">Backends</a>
+          </div>
+          <div class="chips" aria-label="Key characteristics">
+            <span class="chip">Library-first</span>
+            <span class="chip">Provider-agnostic LLM adapters</span>
+            <span class="chip">Memory retrieval</span>
+            <span class="chip">Hydration</span>
+            <span class="chip">Consolidation queue</span>
+          </div>
+        </div>
+        <aside class="hero-side">
+          <div class="panel stat">
+            <div class="stat-label">Install</div>
+            <div class="stat-value"><code>pip install gistlattice</code></div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-label">Default mode</div>
+            <div class="stat-value">In-memory stores</div>
+          </div>
+          <div class="panel stat">
+            <div class="stat-label">Custom LLMs</div>
+            <div class="stat-value"><code>Settings.llm_factory</code></div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="grid">
+        <aside class="panel toc" aria-label="Table of contents">
+          <h2>On this page</h2>
+          <nav>
+            <a href="#quick-start">Quick Start</a>
+            <a href="#public-surface">Public Surface</a>
+            <a href="#architecture">Architecture</a>
+            <a href="#backends">Backends</a>
+            <a href="#providers">Providers</a>
+            <a href="#configuration">Configuration</a>
+            <a href="#functions">Functions</a>
+            <a href="#examples">Examples</a>
+          </nav>
+        </aside>
+
+        <div class="content">
+          <section class="panel" id="quick-start">
+            <h2>Quick Start</h2>
+            <p>
+              The default configuration uses in-memory stores, so you can get started without Redis, Neo4j, or
+              Qdrant. You still need to provide an LLM adapter through <code>Settings.llm_factory</code> or
+              <code>Settings.llm_factory_path</code>.
+            </p>
+            <div class="code">
+              <pre><code>import asyncio
+
+from gistlattice import Settings, build_default_service
+
+
+async def main() -&gt; None:
+    service = build_default_service(
+        Settings(
+            environment="test",
+            llm_factory_path="my_project.providers.build_my_provider_llm",
+        )
+    )
+
+    retrieval = await service.retrieve(
+        tenant_id="tenant-a",
+        user_id="user-a",
+        query="Help me plan my next task.",
+    )
+    print(retrieval.hydrated_context)
+
+    job = await service.queue_consolidation(
+        tenant_id="tenant-a",
+        user_id="user-a",
+        prompt="Help me plan my next task.",
+        response="Here is a memory-bearing response from your own app.",
+        request_id="req-123",
+    )
+    analysis = await service.consolidate(job.job_id)
+    print(analysis.gist)
+
+
+asyncio.run(main())</code></pre>
+            </div>
+          </section>
+
+          <section class="panel" id="public-surface">
+            <h2>Public Surface</h2>
+            <p>
+              The package root exports only the small library surface users are expected to rely on.
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Settings</code></td>
+                  <td>Runtime configuration model and environment loader.</td>
+                </tr>
+                <tr>
+                  <td><code>build_default_container(...)</code></td>
+                  <td>Builds a configured runtime container.</td>
+                </tr>
+                <tr>
+                  <td><code>build_default_service(...)</code></td>
+                  <td>Builds the ready-to-use memory service.</td>
+                </tr>
+                <tr>
+                  <td><code>GistLatticeContainer</code></td>
+                  <td>Holds backend implementations and runtime state.</td>
+                </tr>
+                <tr>
+                  <td><code>GistLatticeService</code></td>
+                  <td>Provides retrieval, hydration, and consolidation APIs.</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="panel" id="architecture">
+            <h2>Architecture</h2>
+            <p>
+              GistLattice is built around a single service layer. It stays in-process and does not expose HTTP routes
+              in this repository.
+            </p>
+            <div class="code">
+              <pre><code>Your Python app
+  -&gt; GistLatticeService
+  -&gt; GistLatticeContainer
+  -&gt; LLM client
+  -&gt; Episodic store
+  -&gt; Semantic store
+  -&gt; Queue broker
+  -&gt; Consolidation worker
+  -&gt; long-term memory stores</code></pre>
+            </div>
+            <p>
+              The public flow is simple: retrieve memory, hydrate context, queue consolidation, then let the worker
+              finalize it.
+            </p>
+          </section>
+
+          <section class="panel" id="backends">
+            <h2>Backends</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Layer</th>
+                  <th>Options</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>LLM adapter</td>
+                  <td>Required, provided through <code>Settings.llm_factory</code> or <code>Settings.llm_factory_path</code></td>
+                </tr>
+                <tr>
+                  <td>Episodic store</td>
+                  <td><code>memory</code>, <code>qdrant</code></td>
+                </tr>
+                <tr>
+                  <td>Semantic store</td>
+                  <td><code>memory</code>, <code>neo4j</code></td>
+                </tr>
+                <tr>
+                  <td>Queue</td>
+                  <td><code>memory</code>, <code>redis</code></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="callout" style="margin-top: 16px;">
+              <strong>Custom LLM adapters</strong>
+              <span>
+                For provider-agnostic usage, point <code>Settings.llm_factory_path</code> at a factory or pass a
+                callable to <code>Settings.llm_factory</code>. The adapter only needs
+                <code>embed_text(...)</code> and <code>analyze_interaction(...)</code>.
+              </span>
+            </div>
+          </section>
+
+          <section class="panel" id="providers">
+            <h2>Provider Adapters</h2>
+            <p>
+              GistLattice includes ready-made provider factories for OpenAI, Gemini, Ollama, and Anthropic. OpenAI,
+              Gemini, and Ollama can provide both embeddings and memory analysis. Anthropic is analysis-only and
+              needs a separate embedding provider.
+            </p>
+            <p>
+              See the full guide in <a href="providers.md">Provider Adapters</a> for install extras, environment
+              variables, and examples.
+            </p>
+          </section>
+
+          <section class="panel" id="configuration">
+            <h2>Configuration</h2>
+            <p>
+              Configuration comes from environment variables via <code>Settings.from_env()</code>. For Python-native
+              usage, you can also construct <code>Settings</code> directly and pass a callable to
+              <code>Settings.llm_factory</code>.
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Variable</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>GISTLATTICE_ENV</code></td>
+                  <td>Runtime environment name.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_LLM_FACTORY_PATH</code></td>
+                  <td>Import path for a custom LLM factory.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_EPISODIC_BACKEND</code></td>
+                  <td>Episodic memory backend.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_SEMANTIC_BACKEND</code></td>
+                  <td>Semantic memory backend.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_QUEUE_BACKEND</code></td>
+                  <td>Consolidation queue backend.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_MEMORY_LIMIT</code></td>
+                  <td>Default number of memories to retrieve.</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="panel" id="functions">
+            <h2>Functions</h2>
+            <p>
+              The main service methods you will call are <code>retrieve(...)</code>,
+              <code>hydrate_context(...)</code>, <code>build_hydrated_prompt(...)</code>,
+              <code>queue_consolidation(...)</code>, and <code>consolidate(...)</code>.
+            </p>
+            <p>
+              For full method details, see the Markdown reference in the repository or browse the source directly.
+            </p>
+            <p>
+              <a href="functions.md">Open the functions reference</a>
+              <span aria-hidden="true">·</span>
+              <a href="getting-started.md">Read the getting started guide</a>
+            </p>
+          </section>
+
+          <section class="panel" id="examples">
+            <h2>Examples</h2>
+            <p>
+              The repository includes a full runnable walkthrough in
+              <a href="../examples/README.md">examples/README.md</a> and
+              <a href="../examples/deep_usage.py">examples/deep_usage.py</a>.
+            </p>
+            <p>
+              It shows how to wire a custom adapter, retrieve memory, hydrate context, and consolidate an
+              interaction end to end.
+            </p>
+            <p>
+              The same directory also includes <a href="../examples/openai_usage.py">examples/openai_usage.py</a>,
+              which demonstrates the provider-backed pattern using the OpenAI helper.
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <div class="panel footer">
+        Built for GitHub Pages. Source docs live alongside this page in the <code>docs/</code> directory.
+      </div>
+    </main>
+  </body>
+</html>

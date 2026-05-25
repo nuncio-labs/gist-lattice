@@ -1,26 +1,27 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from memory_service.backends import DeterministicLLMClient, InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore
-from memory_service.config import Settings
-from memory_service.service import MemoryService
-from memory_service.backends import ServiceContainer
+from gistlattice.backends import InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore
+from gistlattice.config import Settings
+from gistlattice.backends import GistLatticeContainer
+from gistlattice.service import GistLatticeService
+from tests.llm_factories import build_fake_provider_llm
 
 
 class MemoryScoringTests(unittest.IsolatedAsyncioTestCase):
     async def test_prompt_hydration_includes_active_context_and_retained_gist(self) -> None:
-        settings = Settings(environment="test")
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
         episodic = InMemoryEpisodicStore()
         semantic = InMemorySemanticStore()
-        llm = DeterministicLLMClient()
-        container = ServiceContainer(
+        llm = build_fake_provider_llm(settings)
+        container = GistLatticeContainer(
             settings=settings,
             llm=llm,
             episodic_store=episodic,
             semantic_store=semantic,
             queue=InMemoryQueueBroker(),
         )
-        service = MemoryService(container)
+        service = GistLatticeService(container)
 
         await episodic.register_episode(
             tenant_id="tenant-a",
@@ -52,7 +53,8 @@ class MemoryScoringTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_old_low_importance_memories_are_filtered_out(self) -> None:
         store = InMemoryEpisodicStore()
-        llm = DeterministicLLMClient()
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        llm = build_fake_provider_llm(settings)
         embedding = await llm.embed_text("stale memory")
         await store.register_episode(
             tenant_id="tenant-a",

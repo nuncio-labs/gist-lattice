@@ -1,13 +1,32 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
+*.py,cover
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
 
 # Local backups
 backup/

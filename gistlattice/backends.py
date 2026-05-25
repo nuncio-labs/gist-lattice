@@ -1,32 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import hashlib
 import json
 import logging
 import math
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from .config import Settings
-from .models import ConsolidationJob, MemoryAnalysis, MemoryGist
+from .models import ConsolidationJob, MemoryAnalysis, MemoryDocument, MemoryGist, MemoryRetrievalResult
 
 logger = logging.getLogger(__name__)
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _stable_embedding(text: str, dimensions: int = 1536) -> list[float]:
-    values: list[float] = []
-    for index in range(dimensions):
-        digest = hashlib.sha256(f"{index}:{text}".encode("utf-8")).digest()
-        integer = int.from_bytes(digest[:4], "big", signed=False)
-        values.append((integer / 0xFFFFFFFF) * 2.0 - 1.0)
-    return values
 
 
 def cosine_similarity(left: list[float], right: list[float]) -> float:
@@ -45,8 +37,6 @@ def cosine_similarity(left: list[float], right: list[float]) -> float:
 
 class LLMClient(Protocol):
     async def embed_text(self, text: str) -> list[float]: ...
-
-    async def generate_reply(self, *, system_prompt: str, user_prompt: str) -> str: ...
 
     async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis: ...
 
@@ -99,100 +89,28 @@ class QueueBroker(Protocol):
 
     async def recover(self) -> None: ...
 
+    async def depth(self) -> int: ...
+
     async def close(self) -> None: ...
 
 
-class DeterministicLLMClient:
-    async def embed_text(self, text: str) -> list[float]:
-        return _stable_embedding(text)
+def _load_custom_llm(settings: Settings) -> LLMClient:
+    factory = settings.llm_factory
+    if factory is None:
+        if not settings.llm_factory_path:
+            raise ValueError("GISTLATTICE_LLM_FACTORY_PATH must be set for custom LLM backends.")
 
-    async def generate_reply(self, *, system_prompt: str, user_prompt: str) -> str:
-        memory_line = ""
-        for line in system_prompt.splitlines():
-            if line.startswith("- Previous Gist:"):
-                memory_line = line.split(":", 1)[1].strip()
-                break
-        focus_line = ""
-        for line in system_prompt.splitlines():
-            if line.startswith("Active Context:"):
-                focus_line = line.split(":", 1)[1].strip()
-                break
-        pieces = [f"Context-aware reply: {user_prompt.strip()}"]
-        if memory_line:
-            pieces.append(f"memory={memory_line}")
-        if focus_line and focus_line != "none":
-            pieces.append(f"context={focus_line}")
-        return " | ".join(pieces)
+        module_path, attr_name = settings.llm_factory_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        factory = getattr(module, attr_name)
 
-    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis:
-        text = f"{prompt} {response}".lower()
-        importance = 0.35
-        if any(word in text for word in ("urgent", "asap", "immediately", "important")):
-            importance = 0.9
-        elif "?" in prompt or "!" in prompt:
-            importance = 0.65
-        valence = 0.15
-        if any(word in text for word in ("angry", "frustrated", "panic", "worried", "broken")):
-            valence = -0.7
-        elif any(word in text for word in ("happy", "great", "thanks", "relief", "solved")):
-            valence = 0.6
-        structural_location = None
-        for candidate in ("new york", "san francisco", "london", "paris", "berlin", "tokyo", "delhi", "mumbai", "seattle"):
-            if candidate in text:
-                structural_location = candidate.title()
-                break
-        core_project = None
-        for marker in ("project", "file", "task"):
-            if marker in text:
-                core_project = prompt.strip().splitlines()[0][:80]
-                break
-        gist = prompt.strip().splitlines()[0][:120]
-        return MemoryAnalysis(
-            gist=gist,
-            valence=max(-1.0, min(1.0, valence)),
-            importance=max(0.0, min(1.0, importance)),
-            structural_location=structural_location,
-            core_project=core_project,
-        )
-
-
-class OpenAILLMClient:
-    def __init__(self, settings: Settings) -> None:
-        try:
-            import openai
-        except ImportError as exc:  # pragma: no cover - exercised only when optional dependency is installed
-            raise RuntimeError("openai package is not installed") from exc
-
-        self._client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
-        self._settings = settings
-
-    async def embed_text(self, text: str) -> list[float]:
-        response = await self._client.embeddings.create(
-            input=[text],
-            model=self._settings.openai_embedding_model,
-        )
-        return list(response.data[0].embedding)
-
-    async def generate_reply(self, *, system_prompt: str, user_prompt: str) -> str:
-        response = await self._client.chat.completions.create(
-            model=self._settings.openai_chat_model,
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-        )
-        return response.choices[0].message.content or ""
-
-    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis:
-        analysis_prompt = (
-            "Analyze the interaction and return JSON with keys gist, valence, importance, "
-            "structural_location, and core_project. "
-            f"Prompt: {prompt}\nResponse: {response}"
-        )
-        analysis = await self._client.chat.completions.create(
-            model=self._settings.openai_analysis_model,
-            messages=[{"role": "user", "content": analysis_prompt}],
-            response_format={"type": "json_object"},
-        )
-        payload = json.loads(analysis.choices[0].message.content or "{}")
-        return MemoryAnalysis.model_validate(payload)
+    candidate = factory(settings) if callable(factory) else factory
+    if isinstance(candidate, type):  # allow factories to return a class
+        candidate = candidate(settings)
+    for method_name in ("embed_text", "analyze_interaction"):
+        if not hasattr(candidate, method_name):
+            raise TypeError(f"Custom LLM factory must provide a client with `{method_name}`.")
+    return candidate
 
 
 @dataclass(slots=True)
@@ -345,6 +263,9 @@ class InMemoryQueueBroker:
         while self._processing:
             await self._queue.put(self._processing.pop(0))
 
+    async def depth(self) -> int:
+        return self._queue.qsize() + len(self._processing)
+
     async def close(self) -> None:
         return None
 
@@ -387,6 +308,11 @@ class RedisQueueBroker:
             if raw is None:
                 break
             await self._client.rpush(self._settings.redis_queue_name, raw)
+
+    async def depth(self) -> int:
+        queued = await self._client.llen(self._settings.redis_queue_name)
+        processing = await self._client.llen(self._settings.redis_processing_name)
+        return int(queued + processing)
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -552,19 +478,18 @@ class Neo4jSemanticStore:
 
 
 @dataclass(slots=True)
-class ServiceContainer:
+class GistLatticeContainer:
     settings: Settings
     llm: LLMClient
     episodic_store: EpisodicStore
     semantic_store: SemanticStore
     queue: QueueBroker
+    job_store: dict[str, ConsolidationJob] = field(default_factory=dict)
+    job_status: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "ServiceContainer":
-        if settings.llm_backend == "openai":
-            llm: LLMClient = OpenAILLMClient(settings)
-        else:
-            llm = DeterministicLLMClient()
+    def from_settings(cls, settings: Settings) -> "GistLatticeContainer":
+        llm = _load_custom_llm(settings)
 
         if settings.episodic_store_backend == "qdrant":
             episodic_store: EpisodicStore = QdrantEpisodicStore(settings)

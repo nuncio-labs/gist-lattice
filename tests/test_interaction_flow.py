@@ -1,35 +1,35 @@
 import unittest
 
-from memory_service.backends import DeterministicLLMClient, InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore, ServiceContainer
-from memory_service.config import Settings
-from memory_service.models import ConsolidationJob
-from memory_service.service import MemoryService
-from memory_service.worker import ConsolidationWorker
+from gistlattice.backends import InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore, GistLatticeContainer
+from gistlattice.config import Settings
+from gistlattice.service import GistLatticeService
+from gistlattice.worker import ConsolidationWorker
+from tests.llm_factories import build_fake_provider_llm
 
 
 class InteractionFlowTests(unittest.IsolatedAsyncioTestCase):
-    async def test_interaction_queues_and_worker_consolidates(self) -> None:
-        settings = Settings(environment="test", api_token="secret-token")
-        container = ServiceContainer(
+    async def test_queue_and_worker_consolidates(self) -> None:
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        container = GistLatticeContainer(
             settings=settings,
-            llm=DeterministicLLMClient(),
+            llm=build_fake_provider_llm(settings),
             episodic_store=InMemoryEpisodicStore(),
             semantic_store=InMemorySemanticStore(),
             queue=InMemoryQueueBroker(),
         )
-        service = MemoryService(container)
+        service = GistLatticeService(container)
         worker = ConsolidationWorker(service)
 
-        response = await service.interact(
+        job = await service.queue_consolidation(
             tenant_id="tenant-a",
             user_id="user-a",
             prompt="Urgent project update for Paris deployment",
+            response="Context-aware reply: Urgent project update for Paris deployment",
             request_id="req-123",
         )
 
-        self.assertEqual(response.user_id, "user-a")
-        self.assertEqual(response.tenant_id, "tenant-a")
-        self.assertGreaterEqual(response.memory_hits, 0)
+        self.assertEqual(job.user_id, "user-a")
+        self.assertEqual(job.tenant_id, "tenant-a")
 
         processed = await worker.process_once()
         self.assertTrue(processed)
@@ -43,27 +43,23 @@ class InteractionFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("LOCATED_AT", context)
 
     async def test_worker_acknowledges_jobs_without_losing_them(self) -> None:
-        settings = Settings(environment="test")
-        container = ServiceContainer(
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        container = GistLatticeContainer(
             settings=settings,
-            llm=DeterministicLLMClient(),
+            llm=build_fake_provider_llm(settings),
             episodic_store=InMemoryEpisodicStore(),
             semantic_store=InMemorySemanticStore(),
             queue=InMemoryQueueBroker(),
         )
-        service = MemoryService(container)
+        service = GistLatticeService(container)
         worker = ConsolidationWorker(service)
 
-        await container.queue.enqueue(
-            ConsolidationJob(
-                job_id="job-1",
-                interaction_id="interaction-1",
-                tenant_id="tenant-a",
-                user_id="user-a",
-                prompt="Need a task plan",
-                response="Context-aware reply: Need a task plan",
-                request_id="req-1",
-            )
+        await service.queue_consolidation(
+            tenant_id="tenant-a",
+            user_id="user-a",
+            prompt="Need a task plan",
+            response="Context-aware reply: Need a task plan",
+            request_id="req-1",
         )
 
         processed = await worker.process_once()

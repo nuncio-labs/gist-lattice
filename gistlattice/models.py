@@ -6,21 +6,6 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 
-class InteractionRequest(BaseModel):
-    user_id: str = Field(min_length=1)
-    prompt: str = Field(min_length=1)
-
-
-class InteractionResponse(BaseModel):
-    response: str
-    interaction_id: str
-    job_id: str
-    request_id: str
-    tenant_id: str
-    user_id: str
-    memory_hits: int
-
-
 class MemoryAnalysis(BaseModel):
     gist: str
     valence: float = Field(ge=-1.0, le=1.0)
@@ -65,6 +50,20 @@ class ConsolidationJob(BaseModel):
     request_id: str
     attempt: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class MemoryDocument(BaseModel):
+    page_content: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class MemoryRetrievalResult(BaseModel):
+    query: str
+    tenant_id: str
+    user_id: str
+    documents: list[MemoryDocument] = Field(default_factory=list)
+    hydrated_context: str = ""
+    memory_hits: int = 0
 
 
 class Principal(BaseModel):
