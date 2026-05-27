@@ -34,7 +34,7 @@ class GistLatticeService:
         limit: int | None = None,
     ) -> MemoryRetrievalResult:
         query_embedding = await self.container.llm.embed_text(query)
-        memory_limit = limit or self.container.settings.memory_limit
+        memory_limit = self.container.settings.memory_limit if limit is None else limit
         retained_gists = await self.container.episodic_store.recall_relevant_gists(
             tenant_id=tenant_id,
             user_id=user_id,
@@ -134,7 +134,12 @@ class GistLatticeService:
         if job is None:
             raise KeyError(f"Unknown consolidation job: {job_id}")
         if self.container.job_status.get(job_id) == "completed":
-            return await self.container.llm.analyze_interaction(prompt=job.prompt, response=job.response)
+            analysis = self.container.job_results.get(job_id)
+            if analysis is not None:
+                return analysis
+            analysis = await self.container.llm.analyze_interaction(prompt=job.prompt, response=job.response)
+            self.container.job_results[job_id] = analysis
+            return analysis
 
         analysis = await self.container.llm.analyze_interaction(prompt=job.prompt, response=job.response)
         await self.finalize_consolidation(job, analysis)
@@ -190,4 +195,5 @@ class GistLatticeService:
                 "job_id": job.job_id,
             },
         )
+        self.container.job_results[job.job_id] = analysis
         return analysis

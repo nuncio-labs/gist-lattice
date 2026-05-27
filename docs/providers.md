@@ -114,4 +114,5 @@ Environment variables:
 
 - Each factory returns an object implementing the GistLattice LLM contract.
 - You can still wrap these factories in your own function if you need custom defaults.
+- If you pair any provider with the `qdrant` episodic backend, keep the embedding dimension stable across runs or set `GISTLATTICE_QDRANT_VECTOR_SIZE` explicitly.
 - For full runtime selection details, see [Backends](./backends.md).

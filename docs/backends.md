@@ -43,6 +43,13 @@ service = build_default_service(settings)
 | `memory` | Local development and tests | no extra |
 | `qdrant` | Durable vector recall | `pip install gistlattice[qdrant]` |
 
+Qdrant-backed episodic memory now supports either of two sizing modes:
+
+- set `GISTLATTICE_QDRANT_VECTOR_SIZE` when you already know the embedding width
+- leave it unset to let GistLattice create the collection from the first stored embedding
+
+If you use a custom LLM adapter, make sure its embedding dimensions stay stable for a given deployment.
+
 ## Semantic Memory Backends
 
 | Backend | When To Use | Install |
@@ -56,6 +63,8 @@ service = build_default_service(settings)
 | --- | --- | --- |
 | `memory` | Local development and tests | no extra |
 | `redis` | Durable consolidation queue | `pip install gistlattice[redis]` |
+
+Both queue implementations preserve FIFO job ordering, so switching from memory to Redis should not change processing order.
 
 ## How Selection Works
 

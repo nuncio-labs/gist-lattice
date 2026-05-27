@@ -18,6 +18,8 @@ pip install gistlattice[redis]
 
 For LLM providers, install the matching extra and use one of the ready-made provider factories. See [Backends](./backends.md) for the adapter contract and [Provider Adapters](./providers.md) for the provider-specific helpers.
 
+If you use the `qdrant` episodic backend, set `GISTLATTICE_QDRANT_VECTOR_SIZE` when you already know the embedding width for your adapter. Otherwise, GistLattice will create the collection from the first embedding it stores.
+
 ## Minimal Example
 
 ```python

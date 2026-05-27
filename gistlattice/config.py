@@ -19,6 +19,7 @@ class Settings(BaseModel):
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
     qdrant_collection: str = "user_episodic_stream"
+    qdrant_vector_size: int | None = None
 
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_username: str = "neo4j"
@@ -51,6 +52,11 @@ class Settings(BaseModel):
             "qdrant_host": env("GISTLATTICE_QDRANT_HOST", cls.model_fields["qdrant_host"].default),
             "qdrant_port": int(env("GISTLATTICE_QDRANT_PORT", cls.model_fields["qdrant_port"].default)),
             "qdrant_collection": env("GISTLATTICE_QDRANT_COLLECTION", cls.model_fields["qdrant_collection"].default),
+            "qdrant_vector_size": (
+                int(value)
+                if (value := env("GISTLATTICE_QDRANT_VECTOR_SIZE")) is not None
+                else cls.model_fields["qdrant_vector_size"].default
+            ),
             "neo4j_uri": env("GISTLATTICE_NEO4J_URI", cls.model_fields["neo4j_uri"].default),
             "neo4j_username": env("GISTLATTICE_NEO4J_USERNAME", cls.model_fields["neo4j_username"].default),
             "neo4j_password": env("GISTLATTICE_NEO4J_PASSWORD", cls.model_fields["neo4j_password"].default),
@@ -74,6 +80,8 @@ class Settings(BaseModel):
             raise ValueError("GISTLATTICE_SEMANTIC_BACKEND must be 'memory' or 'neo4j'.")
         if self.queue_backend not in {"memory", "redis"}:
             raise ValueError("GISTLATTICE_QUEUE_BACKEND must be 'memory' or 'redis'.")
+        if self.qdrant_vector_size is not None and self.qdrant_vector_size <= 0:
+            raise ValueError("GISTLATTICE_QDRANT_VECTOR_SIZE must be a positive integer.")
 
     @property
     def is_production(self) -> bool:

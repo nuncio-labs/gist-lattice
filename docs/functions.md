@@ -17,7 +17,7 @@ The configuration model for GistLattice.
 Use it to:
 
 - select the runtime environment
-- provide an LLM adapter plus episodic, semantic, and queue backends
+- provide the required LLM adapter and optionally choose episodic, semantic, and queue backends
 - configure provider-specific values
 - provide a direct Python LLM factory when you do not want to use an import path
 

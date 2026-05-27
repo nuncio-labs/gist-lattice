@@ -285,7 +285,7 @@ class RedisQueueBroker:
         await self._client.ping()
 
     async def enqueue(self, job: ConsolidationJob) -> None:
-        await self._client.rpush(self._settings.redis_queue_name, job.model_dump_json())
+        await self._client.lpush(self._settings.redis_queue_name, job.model_dump_json())
 
     async def dequeue(self, timeout_seconds: int = 1) -> ConsolidationJob | None:
         raw = await self._client.brpoplpush(
@@ -300,14 +300,14 @@ class RedisQueueBroker:
 
     async def nack(self, raw_job: str) -> None:
         await self._client.lrem(self._settings.redis_processing_name, 1, raw_job)
-        await self._client.rpush(self._settings.redis_queue_name, raw_job)
+        await self._client.lpush(self._settings.redis_queue_name, raw_job)
 
     async def recover(self) -> None:
         while True:
             raw = await self._client.rpop(self._settings.redis_processing_name)
             if raw is None:
                 break
-            await self._client.rpush(self._settings.redis_queue_name, raw)
+            await self._client.lpush(self._settings.redis_queue_name, raw)
 
     async def depth(self) -> int:
         queued = await self._client.llen(self._settings.redis_queue_name)
@@ -328,6 +328,7 @@ class QdrantEpisodicStore:
 
         self._client = AsyncQdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
         self._collection = settings.qdrant_collection
+        self._vector_size = settings.qdrant_vector_size
         self._distance = Distance
         self._filter = Filter
         self._field_condition = FieldCondition
@@ -336,11 +337,25 @@ class QdrantEpisodicStore:
         self._vector_params = VectorParams
 
     async def ensure_ready(self) -> None:
-        if not await self._client.collection_exists(self._collection):
-            await self._client.create_collection(
-                collection_name=self._collection,
-                vectors_config=self._vector_params(size=1536, distance=self._distance.COSINE),
-            )
+        if await self._client.collection_exists(self._collection):
+            return None
+        if self._vector_size is None:
+            return None
+        await self._client.create_collection(
+            collection_name=self._collection,
+            vectors_config=self._vector_params(size=self._vector_size, distance=self._distance.COSINE),
+        )
+
+    async def _ensure_collection_for_embedding(self, embedding: list[float]) -> None:
+        if await self._client.collection_exists(self._collection):
+            return None
+        vector_size = self._vector_size or len(embedding)
+        if vector_size <= 0:
+            raise ValueError("Qdrant embeddings must have at least one dimension.")
+        await self._client.create_collection(
+            collection_name=self._collection,
+            vectors_config=self._vector_params(size=vector_size, distance=self._distance.COSINE),
+        )
 
     async def register_episode(
         self,
@@ -354,7 +369,7 @@ class QdrantEpisodicStore:
         valence: float,
         importance: float,
     ) -> None:
-        await self.ensure_ready()
+        await self._ensure_collection_for_embedding(embedding)
         payload = {
             "tenant_id": tenant_id,
             "user_id": user_id,
@@ -376,7 +391,8 @@ class QdrantEpisodicStore:
     async def recall_relevant_gists(
         self, *, tenant_id: str, user_id: str, query_embedding: list[float], limit: int
     ) -> list[MemoryGist]:
-        await self.ensure_ready()
+        if not await self._client.collection_exists(self._collection):
+            return []
         results_object = await self._client.query_points(
             collection_name=self._collection,
             query=query_embedding,
@@ -425,7 +441,7 @@ class Neo4jSemanticStore:
         self._bootstrap_schema()
 
     def _bootstrap_schema(self) -> None:
-        query = "CREATE CONSTRAINT user_id_unique IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE"
+        query = "CREATE CONSTRAINT user_tenant_id_unique IF NOT EXISTS FOR (u:User) REQUIRE (u.tenant_id, u.id) IS UNIQUE"
         with self._driver.session() as session:
             session.run(query)
 
@@ -435,6 +451,7 @@ class Neo4jSemanticStore:
     async def get_active_user_context(self, *, tenant_id: str, user_id: str) -> dict[str, str]:
         query = """
         MATCH (u:User {id: $user_id, tenant_id: $tenant_id})-[r:CURRENT_STATE|ACTIVE_FOCUS|LOCATED_AT]->(target)
+        WHERE target.tenant_id = $tenant_id
         RETURN type(r) as relationship, target.name as state_value
         """
 
@@ -451,6 +468,10 @@ class Neo4jSemanticStore:
     async def mutate_state_edge(
         self, *, tenant_id: str, user_id: str, relationship_type: str, new_value: str, entity_type: str
     ) -> None:
+        allowed_relationships = {"CURRENT_STATE", "ACTIVE_FOCUS", "LOCATED_AT"}
+        if relationship_type not in allowed_relationships:
+            raise ValueError(f"Unsupported relationship_type: {relationship_type}")
+
         query = f"""
         MERGE (u:User {{id: $user_id, tenant_id: $tenant_id}})
         OPTIONAL MATCH (u)-[old_rel:{relationship_type}]->(old_target)
@@ -463,7 +484,7 @@ class Neo4jSemanticStore:
             }}]->(old_target)
             DELETE old_rel
         )
-        MERGE (new_target:Entity {{name: $new_value, type: $entity_type}})
+        MERGE (new_target:Entity {{tenant_id: $tenant_id, name: $new_value, type: $entity_type}})
         MERGE (u)-[:{relationship_type}]->(new_target)
         """
 
@@ -486,6 +507,7 @@ class GistLatticeContainer:
     queue: QueueBroker
     job_store: dict[str, ConsolidationJob] = field(default_factory=dict)
     job_status: dict[str, str] = field(default_factory=dict)
+    job_results: dict[str, MemoryAnalysis] = field(default_factory=dict)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "GistLatticeContainer":

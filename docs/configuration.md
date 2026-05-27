@@ -27,6 +27,7 @@ GistLattice reads settings from environment variables through `Settings.from_env
 | `GISTLATTICE_QDRANT_HOST` | Qdrant host | `qdrant` |
 | `GISTLATTICE_QDRANT_PORT` | Qdrant port | `qdrant` |
 | `GISTLATTICE_QDRANT_COLLECTION` | Qdrant collection name | `qdrant` |
+| `GISTLATTICE_QDRANT_VECTOR_SIZE` | Qdrant vector size for collection creation | optional |
 | `GISTLATTICE_NEO4J_URI` | Neo4j Bolt URI | `neo4j` |
 | `GISTLATTICE_NEO4J_USERNAME` | Neo4j username | `neo4j` |
 | `GISTLATTICE_NEO4J_PASSWORD` | Neo4j password | `neo4j` |
@@ -40,6 +41,7 @@ The settings layer validates:
 
 - supported backend names
 - LLM factory presence through `GISTLATTICE_LLM_FACTORY_PATH` or `Settings.llm_factory`
+- `GISTLATTICE_QDRANT_VECTOR_SIZE`, when set, is a positive integer
 
 ## Recommended Combinations
 
@@ -55,6 +57,7 @@ For ready-made provider helpers, see [Provider Adapters](./providers.md).
 export GISTLATTICE_ENV=production
 export GISTLATTICE_LLM_FACTORY_PATH=your_module.build_llm_client
 export GISTLATTICE_EPISODIC_BACKEND=qdrant
+export GISTLATTICE_QDRANT_VECTOR_SIZE=1536
 export GISTLATTICE_SEMANTIC_BACKEND=neo4j
 export GISTLATTICE_QUEUE_BACKEND=redis
 ```
