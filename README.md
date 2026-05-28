@@ -80,12 +80,12 @@ graph LR
     App --> Hydrate(memory.hydrate_context)
     
     Remember --> LLM[LLM Reflection Analysis]
-    Hydrate --> VectorSearch[Vector Search]
     
     LLM --> Episodic[(Episodic: Qdrant)]
     LLM --> Semantic[(Semantic: Neo4j)]
     
-    VectorSearch --> Episodic
+    Hydrate --> Episodic
+    Hydrate --> Semantic
 ```
 
 ## 📚 Documentation
