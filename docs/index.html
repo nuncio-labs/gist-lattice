@@ -488,7 +488,7 @@
             
             <!-- Hero / Introduction -->
             <section id="introduction" class="hero-section">
-                <div class="hero-badge">v0.2.0 Released</div>
+                <div class="hero-badge">v0.2.1 Released</div>
                 <h1>Cognitive Memory <br>for <span class="gradient-text">AI Agents</span>.</h1>
                 <p style="font-size: 1.25rem; max-width: 700px; margin-bottom: 2rem;">
                     A beautiful, unified Python library for giving your LLMs durable, long-term memory. It actively reflects on conversations, extracts emotional valences, maps semantic graphs, and intelligently injects context.
@@ -826,6 +826,16 @@ final_prompt = <span class="token string">f"{system_prompt_addition}\n\nUser: {u
                                 <td><code>int</code></td>
                                 <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
                             </tr>
+                            <tr>
+                                <td><code>buffer_size</code> <span class="badge optional">Optional</span></td>
+                                <td><code>int</code></td>
+                                <td>Number of interactions held in the short-term sliding window. Default: <code>15</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>use_semantic_buffer</code> <span class="badge optional">Optional</span></td>
+                                <td><code>bool</code></td>
+                                <td>If True, detects topic shifts using embeddings to dynamically flush the buffer. Default: <code>False</code>.</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -912,6 +922,14 @@ final_prompt = <span class="token string">f"{system_prompt_addition}\n\nUser: {u
                             <tr>
                                 <td><code>GISTLATTICE_MEMORY_LIMIT</code></td>
                                 <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_BUFFER_SIZE</code></td>
+                                <td>Number of interactions held in the short-term sliding window. Default: <code>15</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_USE_SEMANTIC_BUFFER</code></td>
+                                <td>If True, detects topic shifts using embeddings to dynamically flush the buffer. Default: <code>False</code>.</td>
                             </tr>
                         </tbody>
                     </table>

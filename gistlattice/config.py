@@ -31,6 +31,8 @@ class Settings(BaseModel):
     redis_processing_name: str = "memory-consolidation:processing"
 
     memory_limit: int = 3
+    buffer_size: int = 15
+    use_semantic_buffer: bool = False
 
     @field_validator("environment", "storage_backend", "queue_backend")
     @classmethod
@@ -61,6 +63,8 @@ class Settings(BaseModel):
             "redis_queue_name": env("GISTLATTICE_REDIS_QUEUE_NAME", cls.model_fields["redis_queue_name"].default),
             "redis_processing_name": env("GISTLATTICE_REDIS_PROCESSING_NAME", cls.model_fields["redis_processing_name"].default),
             "memory_limit": int(env("GISTLATTICE_MEMORY_LIMIT", cls.model_fields["memory_limit"].default)),
+            "buffer_size": int(env("GISTLATTICE_BUFFER_SIZE", cls.model_fields["buffer_size"].default)),
+            "use_semantic_buffer": str(env("GISTLATTICE_USE_SEMANTIC_BUFFER", "false")).lower() in ("true", "1", "yes")
         }
         settings = cls.model_validate(data)
         return settings

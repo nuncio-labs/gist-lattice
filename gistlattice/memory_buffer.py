@@ -6,6 +6,9 @@ from typing import List, Dict, Any, Callable, Awaitable, Protocol, TypedDict
 
 logger = logging.getLogger(__name__)
 
+# Global set to keep strong references to background tasks, preventing GC
+_active_tasks = set()
+
 class BufferState(TypedDict):
     active_buffer: List[Dict[str, Any]]
     buffer_embeddings: List[List[float]]
@@ -132,10 +135,14 @@ class MemoryBufferController:
         payload = [dict(turn) for turn in state["active_buffer"]]
         
         # Asynchronously dispatch to worker
-        asyncio.create_task(self._dispatch_to_worker(tenant_id, user_id, payload))
+        task = asyncio.create_task(self._dispatch_to_worker(tenant_id, user_id, payload))
+        _active_tasks.add(task)
+        task.add_done_callback(_active_tasks.discard)
         
         # Apply overlapping context retention (The Cognitive Bridge)
-        overlap_size = min(self.overlap_window_size, len(state["active_buffer"]))
+        # We ensure overlap_size is strictly less than max_messages to avoid infinite flush loops on small buffer_sizes.
+        safe_overlap = min(self.overlap_window_size, max(0, self.max_messages - 1))
+        overlap_size = min(safe_overlap, len(state["active_buffer"]))
         if overlap_size > 0:
             state["active_buffer"] = state["active_buffer"][-overlap_size:]
             state["buffer_embeddings"] = state["buffer_embeddings"][-overlap_size:]

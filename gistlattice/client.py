@@ -32,7 +32,7 @@ class GistLattice:
         self.memory_buffer = MemoryBufferController(
             worker_callback=self._handle_buffer_flush,
             store=buffer_store,
-            use_embeddings=False  # Default to just max_messages limit as requested
+            use_embeddings=self.service.container.settings.use_semantic_buffer
         )
         
         # Lazy thread initialization for synchronous callers
@@ -80,7 +80,10 @@ class GistLattice:
         If run_in_background=True and bypass_buffer=True, enqueues the memory job and returns the job ID (str).
         """
         if not bypass_buffer:
-            await self.memory_buffer.process_turn(self.tenant_id, self.user_id, prompt, response)
+            msg_embedding = None
+            if self.service.container.settings.use_semantic_buffer:
+                msg_embedding = await self.service.container.llm.embed_text(prompt)
+            await self.memory_buffer.process_turn(self.tenant_id, self.user_id, prompt, response, msg_embedding)
             return None
 
         if run_in_background:

@@ -21,8 +21,15 @@ class MemoryAnalysis(BaseModel):
         normalized = dict(values)
         for field in ("structural_location", "core_project"):
             value = normalized.get(field)
-            if isinstance(value, str) and value.strip().lower() in {"", "null", "none"}:
-                normalized[field] = None
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                normalized[field] = str(value)
+            elif isinstance(value, str):
+                if value.strip().lower() in {"", "null", "none"}:
+                    normalized[field] = None
+            else:
+                normalized[field] = str(value)
         return normalized
 
 
