@@ -1,69 +1,50 @@
-# GistLattice
-
 ![GistLattice banner](./assets/gistlattice-banner.png)
 
-GistLattice is a compact memory layer for agents and long-lived Python apps.
+<div align="center">
+  
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![Python Version](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-It gives you a clean way to:
+**Cognitive Memory for AI Agents.**
+<br>
+A beautiful, three-method Python library for giving your LLMs durable, long-term memory.
+</div>
 
-- retrieve relevant episodic memories
-- hydrate prompts with durable semantic context
-- consolidate interactions back into memory
-- swap storage backends without rewriting your app logic
+---
 
-It is intentionally core-first and Python-native. You can use it directly in an agent loop, wrap it in your own service, or grow it into a larger system later.
+## 🧠 Why GistLattice?
 
-Tags: agent memory, LLM, prompt hydration, episodic memory, semantic memory, memory consolidation, Qdrant, Neo4j, Redis, OpenAI, Gemini, Ollama, Anthropic
+Most "Agent Memory" systems simply dump raw chat transcripts into a vector database. GistLattice is different. It uses an LLM to actively **reflect** on a conversation before saving it.
 
-## Why It Matters
+When you ask GistLattice to remember an interaction, it extracts:
+1. **Gist**: A concise summary of the factual information.
+2. **Valence**: The emotional tone (-1.0 to 1.0). Did the user get angry? Were they excited? Your agent will remember their mood!
+3. **Importance**: A score (0.0 to 1.0) dictating how crucial this memory is. Passing comments decay quickly; major life events are cemented permanently.
 
-Most agent stacks remember only the current prompt. GistLattice adds a structured memory loop:
+## 📦 Installation
 
-1. look up relevant memories
-2. inject context into the next prompt
-3. analyze the interaction
-4. write the result back into episodic and semantic memory
-
-That gives your app a practical path from stateless chat to durable, tenant-aware memory.
-
-## What You Get
-
-- `retrieve(...)` for memory lookup
-- `hydrate_context(...)` for prompt-ready memory text
-- `build_hydrated_prompt(...)` for both the prompt block and structured gists
-- `queue_consolidation(...)` for deferred memory writes
-- `consolidate(...)` for turning a prompt/response pair into memory
-- pluggable backends for episodic, semantic, and queue storage
-- provider-agnostic LLM adapters, plus ready-made helpers for OpenAI, Gemini, Ollama, and Anthropic
-
-## Install
-
-Base install:
-
+Install the base library (defaults to fast, in-memory databases):
 ```bash
 pip install gistlattice
 ```
 
-Optional backend extras:
-
+Install production backends (optional):
 ```bash
-pip install gistlattice[qdrant]
-pip install gistlattice[neo4j]
-pip install gistlattice[redis]
+pip install gistlattice[qdrant,neo4j,redis]
 ```
 
-Optional provider extras:
-
+Install specific LLM providers:
 ```bash
 pip install gistlattice[openai]
 pip install gistlattice[gemini]
-pip install gistlattice[ollama]
 pip install gistlattice[anthropic]
+pip install gistlattice[ollama]
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
-The easiest way to get started is using the high-level `GistLattice` client with a provider like OpenAI. Make sure you have the `openai` extra installed and your `OPENAI_API_KEY` set.
+The entire surface area of the library is encapsulated in a single, elegant class: `GistLattice`.
 
 ```python
 import asyncio
@@ -71,14 +52,15 @@ from gistlattice import GistLattice
 
 async def main() -> None:
     # 1. Initialize the client (defaults to in-memory storage)
-    memory = GistLattice(provider="openai", tenant_id="tenant-a", user_id="user-a")
+    memory = GistLattice(provider="openai", tenant_id="tenant-a", user_id="user-123")
 
     # 2. Store an interaction synchronously
     analysis = await memory.remember(
-        prompt="Help me plan my next task.",
-        response="Here is a memory-bearing response from your own app."
+        prompt="I'm feeling really stressed about the product launch tomorrow.",
+        response="I understand. Let's review the final checklist to make sure we are ready."
     )
     print(f"Saved Memory Gist: {analysis.gist}")
+    print(f"Emotional Valence: {analysis.valence}") # e.g., -0.8 (Highly stressed)
 
     # 3. Retrieve formatted context to inject into your next LLM prompt
     context = await memory.hydrate_context("What should I do next?")
@@ -88,81 +70,52 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-## Typical Flow
+## 📐 Architecture Flow
+
+GistLattice intercepts conversations and routes them through a robust processing pipeline:
 
 ```mermaid
 flowchart LR
-    App["Your app"] --> Memory["memory.remember(...)"]
-    App --> Retrieve["memory.hydrate_context(...)"]
-    Memory --> LLM["LLM adapter"]
-    Retrieve --> LLM
-    Memory --> Episodic["Episodic store"]
-    Memory --> Semantic["Semantic store"]
-    Retrieve --> Episodic
-    Retrieve --> Semantic
+    App["Your AI App"] --> Remember["memory.remember(...)"]
+    App --> Hydrate["memory.hydrate_context(...)"]
+    
+    Remember --> LLM["LLM Reflection Analysis"]
+    Hydrate --> VectorSearch["Vector Search"]
+    
+    LLM --> Episodic["Episodic Store (Qdrant)"]
+    LLM --> Semantic["Semantic Graph (Neo4j)"]
+    
+    VectorSearch --> Episodic
 ```
 
-## Configuration
+## 📚 Documentation
 
-`Settings` can be created directly in Python or loaded from the environment.
+We have completely stripped out the architectural jargon. Our documentation is heavily focused on getting you building instantly:
 
-Core settings:
+1. **[User Guide & API Reference](./docs/user-guide.md)**: Everything you need to know about `remember()`, `hydrate_context()`, and `retrieve()`.
+2. **[Supported Providers](./docs/providers.md)**: How to switch between OpenAI, Gemini, Anthropic, and Ollama.
+3. **[Production Backends](./docs/backends.md)**: How to connect to Redis, Neo4j, and Qdrant for durable, at-scale memory.
 
-- `GISTLATTICE_LLM_FACTORY_PATH`, `Settings.llm_factory`, or `Settings.llm_provider` is required
-- `Settings.llm_provider` selects the provider for analysis and response synthesis
-- `Settings.embedding_provider` can be set independently when you want a different provider for embeddings
-- `GISTLATTICE_EPISODIC_BACKEND` defaults to `memory`
-- `GISTLATTICE_SEMANTIC_BACKEND` defaults to `memory`
-- `GISTLATTICE_QUEUE_BACKEND` defaults to `memory`
-- `GISTLATTICE_MEMORY_LIMIT` defaults to `3`
+## 🛠 Examples
 
-Provider and backend docs:
+Want to see runnable code? Check out the `examples/` directory:
+- [`01_basic_openai_sync.py`](./examples/01_basic_openai_sync.py)
+- [`02_hybrid_gemini_async.py`](./examples/02_hybrid_gemini_async.py)
+- [`production/01_programmatic.py`](./examples/production/01_programmatic.py)
+- [`production/02_environment_variables.py`](./examples/production/02_environment_variables.py)
 
-- [Getting Started](./docs/getting-started.md)
-- [Configuration](./docs/configuration.md)
-- [Backends](./docs/backends.md)
-- [Provider Adapters](./docs/providers.md)
+## 🤝 Contributing
 
-If you use Qdrant, you can optionally set `GISTLATTICE_QDRANT_VECTOR_SIZE`. If you do not set it, GistLattice will create the collection from the first embedding it stores.
+We would love your help making GistLattice the standard for agent memory! To contribute:
 
-## Provider Helpers
+1. Fork the repository.
+2. Install dependencies: `pip install -e ".[dev,openai,qdrant,neo4j,redis]"`
+3. Run the test suite:
+   ```bash
+   python3 -m unittest discover -s tests -v
+   ```
+4. Submit a Pull Request!
 
-GistLattice includes provider factories for common SDKs:
-
-- `build_openai_llm(...)`
-- `build_gemini_llm(...)`
-- `build_ollama_llm(...)`
-- `build_anthropic_llm(...)`
-
-It also ships embedding-only helpers for workflows where the model used for memory analysis differs from the model used for embeddings.
-
-## Examples
-
-- [Deep Usage Walkthrough](./examples/deep_usage.py)
-- [OpenAI-Backed Walkthrough](./examples/openai_usage.py)
-
-Run the walkthroughs with:
-
-```bash
-python3 examples/deep_usage.py
-python3 examples/openai_usage.py
-```
-
-## Testing
-
-Run the test suite with:
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-## Project Layout
-
-- `gistlattice/` core library code
-- `tests/` regression and unit tests
-- `docs/` long-form documentation
-- `examples/` runnable walkthroughs
-
-## License
+## 📜 License
 
 This project is licensed under the [Apache License 2.0](./LICENSE).
