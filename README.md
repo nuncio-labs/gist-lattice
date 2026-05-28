@@ -75,15 +75,15 @@ asyncio.run(main())
 GistLattice intercepts conversations and routes them through a robust processing pipeline:
 
 ```mermaid
-flowchart LR
-    App["Your AI App"] --> Remember["memory.remember(...)"]
-    App --> Hydrate["memory.hydrate_context(...)"]
+graph LR
+    App[Your AI App] --> Remember(memory.remember)
+    App --> Hydrate(memory.hydrate_context)
     
-    Remember --> LLM["LLM Reflection Analysis"]
-    Hydrate --> VectorSearch["Vector Search"]
+    Remember --> LLM[LLM Reflection Analysis]
+    Hydrate --> VectorSearch[Vector Search]
     
-    LLM --> Episodic["Episodic Store (Qdrant)"]
-    LLM --> Semantic["Semantic Graph (Neo4j)"]
+    LLM --> Episodic[(Episodic: Qdrant)]
+    LLM --> Semantic[(Semantic: Neo4j)]
     
     VectorSearch --> Episodic
 ```
