@@ -63,61 +63,27 @@ pip install gistlattice[anthropic]
 
 ## Quick Start
 
-You always need an LLM adapter. The default backends are in-memory, which makes the library easy to try locally.
-
-You can choose between:
-
-- a custom adapter via `Settings.llm_factory` or `Settings.llm_factory_path`
-- provider-based configuration with `Settings.llm_provider` plus optional separate embedding provider/model settings
+The easiest way to get started is using the high-level `GistLattice` client with a provider like OpenAI. Make sure you have the `openai` extra installed and your `OPENAI_API_KEY` set.
 
 ```python
 import asyncio
-
-from gistlattice import Settings, build_default_service
-from gistlattice.models import MemoryAnalysis
-
-
-class DemoLLM:
-    async def embed_text(self, text: str) -> list[float]:
-        return [float(len(text))]
-
-    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis:
-        return MemoryAnalysis(
-            gist=f"Memory gist: {prompt[:60]}",
-            valence=0.1,
-            importance=0.5,
-        )
-
-
-def build_demo_llm(_settings: Settings) -> DemoLLM:
-    return DemoLLM()
-
+from gistlattice import GistLattice
 
 async def main() -> None:
-    service = build_default_service(
-        Settings(
-            environment="test",
-            llm_factory=build_demo_llm,
-        )
-    )
+    # 1. Initialize the client (defaults to in-memory storage)
+    memory = GistLattice(provider="openai", tenant_id="tenant-a", user_id="user-a")
 
-    retrieval = await service.retrieve(
-        tenant_id="tenant-a",
-        user_id="user-a",
-        query="Help me plan my next task.",
-    )
-    print(retrieval.hydrated_context)
-
-    job = await service.queue_consolidation(
-        tenant_id="tenant-a",
-        user_id="user-a",
+    # 2. Store an interaction synchronously
+    analysis = await memory.remember(
         prompt="Help me plan my next task.",
-        response="Here is a memory-bearing response from your own app.",
-        request_id="req-123",
+        response="Here is a memory-bearing response from your own app."
     )
-    analysis = await service.consolidate(job.job_id)
-    print(analysis.gist)
+    print(f"Saved Memory Gist: {analysis.gist}")
 
+    # 3. Retrieve formatted context to inject into your next LLM prompt
+    context = await memory.hydrate_context("What should I do next?")
+    print("\n--- Hydrated Context ---")
+    print(context)
 
 asyncio.run(main())
 ```
@@ -126,15 +92,14 @@ asyncio.run(main())
 
 ```mermaid
 flowchart LR
-    App["Your app"] --> Retrieve["retrieve(...)"]
-    Retrieve --> LLM["LLM adapter"]
-    Retrieve --> Episodic["Episodic store"]
-    Retrieve --> Semantic["Semantic store"]
-    App --> Queue["queue_consolidation(...)"]
-    Queue --> Worker["Consolidation worker"]
-    Worker --> LLM
-    Worker --> Episodic
-    Worker --> Semantic
+    App["Your app"] --> Memory["memory.remember(...)"]
+    App --> Retrieve["memory.hydrate_context(...)"]
+    Memory --> LLM["LLM adapter"]
+    Retrieve --> LLM
+    Memory --> Episodic["Episodic store"]
+    Memory --> Semantic["Semantic store"]
+    Retrieve --> Episodic
+    Retrieve --> Semantic
 ```
 
 ## Configuration

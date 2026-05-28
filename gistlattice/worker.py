@@ -20,7 +20,7 @@ class ConsolidationWorker:
             return False
         raw_job = job.model_dump_json()
         try:
-            await self.service.consolidate(job.job_id)
+            await self.service.consolidate(job)
         except Exception:
             logger.exception(
                 "consolidation_failed",

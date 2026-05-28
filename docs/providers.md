@@ -1,121 +1,70 @@
-# Provider Adapters
+# Supported Providers
 
-GistLattice ships ready-made adapter factories for the most common provider SDKs.
+GistLattice is heavily provider-agnostic. It ships with built-in support for the four major LLM providers. 
 
-If you prefer configuration over wrapper functions, see `Settings.llm_provider` and `Settings.embedding_provider` in [Configuration](./configuration.md). The runtime can assemble those providers for you.
+Switching your entire memory infrastructure from OpenAI to Gemini is as simple as changing one string: `provider="gemini"`.
 
-## Available Factories
+## 1. OpenAI
 
-| Provider | Factory | Required extra | Notes |
-| --- | --- | --- | --- |
-| OpenAI | `build_openai_llm(...)` | `pip install gistlattice[openai]` | Uses OpenAI for embeddings and memory analysis. |
-| Gemini | `build_gemini_llm(...)` | `pip install gistlattice[gemini]` | Uses Gemini for embeddings and memory analysis. |
-| Ollama | `build_ollama_llm(...)` | `pip install gistlattice[ollama]` | Uses Ollama for embeddings and memory analysis. |
-| Anthropic | `build_anthropic_llm(...)` | `pip install gistlattice[anthropic]` plus an embedding provider | Uses Anthropic for memory analysis and a separate embedding adapter for embeddings. |
+The default provider. Supports both text generation (for memory reflection) and vector embeddings.
 
-The embedding-only helpers are also available:
-
-- `build_openai_embeddings(...)`
-- `build_gemini_embeddings(...)`
-- `build_ollama_embeddings(...)`
-
-## OpenAI
+**Requirements:**
+- API Key: `OPENAI_API_KEY`
+- Installs: `pip install gistlattice[openai]`
 
 ```python
-from gistlattice import Settings, build_default_service
-from gistlattice.providers import build_openai_llm
-
-service = build_default_service(
-    Settings(
-        llm_factory=build_openai_llm,
-    )
+memory = GistLattice(
+    provider="openai",
+    llm_model="gpt-4o",                            # Optional override
+    embedding_model="text-embedding-3-small"       # Optional override
 )
 ```
 
-Environment variables:
+## 2. Google Gemini
 
-- `OPENAI_API_KEY`
-- `GISTLATTICE_OPENAI_CHAT_MODEL`
-- `GISTLATTICE_OPENAI_EMBEDDING_MODEL`
+Supports both text generation and vector embeddings. Highly recommended for cost-effective memory analysis.
 
-## Gemini
+**Requirements:**
+- API Key: `GEMINI_API_KEY`
+- Installs: `pip install gistlattice[gemini]`
 
 ```python
-from gistlattice import Settings, build_default_service
-from gistlattice.providers import build_gemini_llm
-
-service = build_default_service(
-    Settings(
-        llm_factory=build_gemini_llm,
-    )
+memory = GistLattice(
+    provider="gemini",
+    llm_model="gemini-1.5-pro",                   # Optional override
+    embedding_model="text-embedding-004"          # Optional override
 )
 ```
 
-Environment variables:
+## 3. Anthropic (Claude)
 
-- `GEMINI_API_KEY` or `GOOGLE_API_KEY`
-- `GISTLATTICE_GEMINI_MODEL`
-- `GISTLATTICE_GEMINI_EMBEDDING_MODEL`
+Anthropic supports incredible text generation but **does not provide a public embedding API**. If you select Anthropic as your LLM provider, you **must** specify a separate embedding provider (like OpenAI or Gemini).
 
-## Ollama
+**Requirements:**
+- API Key: `ANTHROPIC_API_KEY` (and the key for your embedding provider)
+- Installs: `pip install gistlattice[anthropic,openai]`
 
 ```python
-from gistlattice import Settings, build_default_service
-from gistlattice.providers import build_ollama_llm
-
-service = build_default_service(
-    Settings(
-        llm_factory=build_ollama_llm,
-    )
+memory = GistLattice(
+    provider="anthropic",
+    llm_model="claude-3-5-sonnet-latest",
+    embedding_provider="openai"                   # Required!
 )
 ```
 
-Environment variables:
+## 4. Ollama (Local Models)
 
-- `GISTLATTICE_OLLAMA_HOST`
-- `GISTLATTICE_OLLAMA_MODEL`
-- `GISTLATTICE_OLLAMA_EMBEDDING_MODEL`
+Ollama allows you to run open-source models completely locally. It supports both text generation and embeddings.
 
-## Anthropic
-
-Anthropic does not provide embeddings itself, so the adapter requires a separate embedding provider factory.
+**Requirements:**
+- The Ollama daemon running locally (usually on port 11434).
+- Models pulled locally (e.g. `ollama pull llama3`, `ollama pull nomic-embed-text`).
+- Installs: `pip install gistlattice[ollama]`
 
 ```python
-from gistlattice import Settings, build_default_service
-from gistlattice.providers import build_anthropic_llm, build_openai_embeddings
-
-
-def build_my_anthropic_llm(settings):
-    return build_anthropic_llm(
-        settings,
-        embedding_client=build_openai_embeddings(settings),
-    )
-
-
-service = build_default_service(
-    Settings(
-        llm_factory=build_my_anthropic_llm,
-    )
+memory = GistLattice(
+    provider="ollama",
+    llm_model="llama3",
+    embedding_model="nomic-embed-text"
 )
 ```
-
-For environment-driven setup, point `GISTLATTICE_ANTHROPIC_EMBEDDINGS_FACTORY_PATH` at an embedding factory such as:
-
-- `gistlattice.providers.build_openai_embeddings`
-- `gistlattice.providers.build_gemini_embeddings`
-- `gistlattice.providers.build_ollama_embeddings`
-- or your own factory
-
-Environment variables:
-
-- `ANTHROPIC_API_KEY`
-- `GISTLATTICE_ANTHROPIC_MODEL`
-- `GISTLATTICE_ANTHROPIC_EMBEDDINGS_FACTORY_PATH`
-
-## Notes
-
-- Each factory returns an object implementing the GistLattice LLM contract.
-- You can still wrap these factories in your own function if you need custom defaults.
-- For provider-driven selection, the default runtime can now assemble separate LLM and embedding providers from `Settings`.
-- If you pair any provider with the `qdrant` episodic backend, keep the embedding dimension stable across runs or set `GISTLATTICE_QDRANT_VECTOR_SIZE` explicitly.
-- For full runtime selection details, see [Backends](./backends.md).

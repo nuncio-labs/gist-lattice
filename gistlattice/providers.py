@@ -373,7 +373,7 @@ def build_anthropic_llm(
                 )
             factory = _callable_factory(embedder_path)
 
-        embedder = factory(_settings) if callable(factory) else factory
+        embedder = factory(settings) if callable(factory) else factory
     if not hasattr(embedder, "embed_text"):
         raise TypeError("Anthropic embedding factory must return an object with `embed_text`.")
 

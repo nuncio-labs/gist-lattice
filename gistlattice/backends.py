@@ -39,7 +39,7 @@ def cosine_similarity(left: list[float], right: list[float]) -> float:
 class LLMClient(Protocol):
     async def embed_text(self, text: str) -> list[float]: ...
 
-    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis: ...
+    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis | dict[str, Any]: ...
 
 
 class EpisodicStore(Protocol):
@@ -123,11 +123,13 @@ class InMemoryEpisodicStore:
     collection_name: str
     _episodes: dict[tuple[str, str], list[dict[str, Any]]]
     _by_interaction: dict[tuple[str, str, str], dict[str, Any]]
+    _lock: asyncio.Lock
 
     def __init__(self, collection_name: str = "user_episodic_stream") -> None:
         self.collection_name = collection_name
         self._episodes = defaultdict(list)
         self._by_interaction = {}
+        self._lock = asyncio.Lock()
 
     async def ensure_ready(self) -> None:
         return None
@@ -145,54 +147,56 @@ class InMemoryEpisodicStore:
         importance: float,
     ) -> None:
         key = (tenant_id, user_id, interaction_id)
-        payload = self._by_interaction.get(key)
-        record = {
-            "tenant_id": tenant_id,
-            "user_id": user_id,
-            "interaction_id": interaction_id,
-            "timestamp": _now().isoformat(),
-            "last_accessed": _now().isoformat(),
-            "raw_text": text,
-            "gist": gist,
-            "valence": valence,
-            "importance": importance,
-            "decay_rate": 0.4 if importance < 0.5 else 0.05,
-            "embedding": list(embedding),
-        }
-        if payload is None:
-            self._episodes[(tenant_id, user_id)].append(record)
-            self._by_interaction[key] = record
-        else:
-            payload.update(record)
+        async with self._lock:
+            payload = self._by_interaction.get(key)
+            record = {
+                "tenant_id": tenant_id,
+                "user_id": user_id,
+                "interaction_id": interaction_id,
+                "timestamp": _now().isoformat(),
+                "last_accessed": _now().isoformat(),
+                "raw_text": text,
+                "gist": gist,
+                "valence": valence,
+                "importance": importance,
+                "decay_rate": 0.4 if importance < 0.5 else 0.05,
+                "embedding": list(embedding),
+            }
+            if payload is None:
+                self._episodes[(tenant_id, user_id)].append(record)
+                self._by_interaction[key] = record
+            else:
+                payload.update(record)
 
     async def recall_relevant_gists(
         self, *, tenant_id: str, user_id: str, query_embedding: list[float], limit: int
     ) -> list[MemoryGist]:
         now = _now()
         ranked: list[tuple[float, dict[str, Any]]] = []
-        for record in self._episodes.get((tenant_id, user_id), []):
-            last_accessed = datetime.fromisoformat(record["last_accessed"])
-            days_elapsed = (now - last_accessed).total_seconds() / 86400.0
-            strength = record["importance"] * math.exp(-record["decay_rate"] * days_elapsed)
-            similarity = cosine_similarity(record["embedding"], query_embedding)
-            score = (0.7 * similarity) + (0.3 * strength)
-            if score > 0.15:
-                ranked.append((score, record))
-        ranked.sort(key=lambda item: item[0], reverse=True)
-        results: list[MemoryGist] = []
-        for score, record in ranked[:limit]:
-            record["last_accessed"] = now.isoformat()
-            record["importance"] = min(1.0, record["importance"] + 0.08)
-            results.append(
-                MemoryGist(
-                    gist=record["gist"],
-                    valence=record["valence"],
-                    importance=record["importance"],
-                    score=score,
-                    raw_text=record["raw_text"],
-                    last_accessed=now,
+        async with self._lock:
+            for record in self._episodes.get((tenant_id, user_id), []):
+                last_accessed = datetime.fromisoformat(record["last_accessed"])
+                days_elapsed = (now - last_accessed).total_seconds() / 86400.0
+                strength = record["importance"] * math.exp(-record["decay_rate"] * days_elapsed)
+                similarity = cosine_similarity(record["embedding"], query_embedding)
+                score = (0.7 * similarity) + (0.3 * strength)
+                if score > 0.15:
+                    ranked.append((score, record))
+            ranked.sort(key=lambda item: item[0], reverse=True)
+            results: list[MemoryGist] = []
+            for score, record in ranked[:limit]:
+                record["last_accessed"] = now.isoformat()
+                record["importance"] = min(1.0, record["importance"] + 0.08)
+                results.append(
+                    MemoryGist(
+                        gist=record["gist"],
+                        valence=record["valence"],
+                        importance=record["importance"],
+                        score=score,
+                        raw_text=record["raw_text"],
+                        last_accessed=now,
+                    )
                 )
-            )
         return results
 
     async def close(self) -> None:
@@ -203,34 +207,38 @@ class InMemoryEpisodicStore:
 class InMemorySemanticStore:
     _state: dict[tuple[str, str], dict[str, str]]
     _history: dict[tuple[str, str], list[dict[str, Any]]]
+    _lock: asyncio.Lock
 
     def __init__(self) -> None:
         self._state = defaultdict(dict)
         self._history = defaultdict(list)
+        self._lock = asyncio.Lock()
 
     async def ensure_ready(self) -> None:
         return None
 
     async def get_active_user_context(self, *, tenant_id: str, user_id: str) -> dict[str, str]:
-        return dict(self._state[(tenant_id, user_id)])
+        async with self._lock:
+            return dict(self._state[(tenant_id, user_id)])
 
     async def mutate_state_edge(
         self, *, tenant_id: str, user_id: str, relationship_type: str, new_value: str, entity_type: str
     ) -> None:
         key = (tenant_id, user_id)
-        current = self._state[key].get(relationship_type)
-        if current == new_value:
-            return
-        if current is not None:
-            self._history[key].append(
-                {
-                    "superseded_type": relationship_type,
-                    "archived_at": _now().isoformat(),
-                    "value": current,
-                    "entity_type": entity_type,
-                }
-            )
-        self._state[key][relationship_type] = new_value
+        async with self._lock:
+            current = self._state[key].get(relationship_type)
+            if current == new_value:
+                return
+            if current is not None:
+                self._history[key].append(
+                    {
+                        "superseded_type": relationship_type,
+                        "archived_at": _now().isoformat(),
+                        "value": current,
+                        "entity_type": entity_type,
+                    }
+                )
+            self._state[key][relationship_type] = new_value
 
     async def close(self) -> None:
         return None
@@ -387,7 +395,8 @@ class QdrantEpisodicStore:
             "importance": importance,
             "decay_rate": 0.4 if importance < 0.5 else 0.05,
         }
-        point_id = int(hashlib.sha256(f"{tenant_id}:{user_id}:{interaction_id}".encode("utf-8")).hexdigest()[:16], 16)
+        import uuid
+        point_id = str(uuid.uuid5(uuid.NAMESPACE_OID, f"{tenant_id}:{user_id}:{interaction_id}"))
         await self._client.upsert(
             collection_name=self._collection,
             points=[self._point_struct(id=point_id, vector=embedding, payload=payload)],

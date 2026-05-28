@@ -1,42 +1,32 @@
-# Examples
+# GistLattice Examples
 
-This directory contains runnable walkthroughs that show how to use GistLattice in real code.
+This directory contains examples demonstrating how to use the simplified `GistLattice` API in different configurations.
 
-## Deep Usage Walkthrough
+## Running the Basic Examples
 
-- [deep_usage.py](./deep_usage.py)
-
-This example shows:
-
-- how to build a custom LLM adapter
-- how to create `Settings`
-- how to build the default service
-- how to configure separate providers and models for LLMs and embeddings
-- how to retrieve memory
-- how to hydrate context
-- how to queue and consolidate an interaction
-- how memory changes after consolidation
-
-Run it with:
+You will need the appropriate API keys set in your environment (e.g. `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`) to run these.
 
 ```bash
-python3 examples/deep_usage.py
+# 1. Basic OpenAI with synchronous execution
+python 01_basic_openai_sync.py
+
+# 2. Gemini LLM + OpenAI Embeddings with asynchronous background queues
+python 02_hybrid_gemini_async.py
 ```
 
-Use the helper factories in `gistlattice.providers` when you want a real model provider. The walkthrough uses a tiny local adapter so the example stays runnable without any external service.
+## Production Examples (Redis, Neo4j, Qdrant)
 
-## Provider-Backed Walkthrough
-
-- [openai_usage.py](./openai_usage.py)
-
-This example shows the same core flow using the OpenAI provider helper. Set `OPENAI_API_KEY` first, then run:
+If you are ready to test GistLattice with actual production databases, navigate to the `production/` subdirectory.
 
 ```bash
-python3 examples/openai_usage.py
+cd production/
+
+# Bring up the required databases via Docker
+docker compose up -d
+
+# Run the programmatic and environment-variable examples
+python 01_programmatic.py
+python 02_environment_variables.py
 ```
 
-The pattern is the same for Gemini, Ollama, or Anthropic:
-
-- pick the matching factory in `gistlattice.providers`
-- pass it through `Settings.llm_factory`
-- call the service methods as usual
+See [production/README.md](production/README.md) for more details.

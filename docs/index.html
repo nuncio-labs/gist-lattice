@@ -98,7 +98,8 @@
 
       h1,
       h2,
-      h3 {
+      h3,
+      h4 {
         margin: 0;
         line-height: 1.1;
       }
@@ -135,6 +136,7 @@
         background: var(--panel-strong);
         color: var(--text);
         font-weight: 600;
+        cursor: pointer;
       }
 
       .button.primary {
@@ -198,6 +200,7 @@
         border-radius: 12px;
         color: var(--text);
         border: 1px solid transparent;
+        transition: all 0.2s;
       }
 
       .toc a:hover {
@@ -213,6 +216,7 @@
 
       section {
         padding: 26px 28px;
+        overflow-x: auto;
       }
 
       section h2 {
@@ -267,9 +271,10 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 14px;
-        overflow: hidden;
+        overflow-x: auto;
         border-radius: 18px;
         border: 1px solid var(--border);
+        display: block;
       }
 
       th,
@@ -309,6 +314,12 @@
         background: rgba(255, 255, 255, 0.65);
         font-size: 0.9rem;
         color: var(--muted);
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      .chip:hover {
+        transform: translateY(-2px);
+        background: #fff;
       }
 
       .footer {
@@ -319,15 +330,25 @@
         text-align: center;
       }
 
-      .kbd {
-        display: inline-block;
-        padding: 2px 7px;
-        border: 1px solid var(--border);
-        border-bottom-width: 2px;
-        border-radius: 7px;
-        background: rgba(255, 255, 255, 0.7);
+      .param-table td:first-child, .env-table td:first-child {
+        font-weight: 600;
         color: var(--text);
-        font-size: 0.88em;
+        white-space: nowrap;
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      .badge.optional {
+        background: #8b5e34;
       }
 
       @media (max-width: 960px) {
@@ -375,23 +396,21 @@
       <div class="hero">
         <div class="panel hero-main">
           <div class="eyebrow">GistLattice Documentation</div>
-          <h1>Memory infrastructure for Python agents.</h1>
+          <h1>Cognitive Memory for AI Agents.</h1>
           <p class="lede">
-            GistLattice is a core-only Python library for retrieval, hydration, and consolidation of long-lived
-            memory. It is designed to stay in-process, stay provider-agnostic, and stay small enough to embed in
-            your own agent loop.
+            GistLattice is an elegant, three-method Python library for retrieval, hydration, and consolidation of long-lived memory. It analyzes conversations, extracts emotional valences, and intelligently injects context into your LLM prompts.
           </p>
           <div class="actions">
             <a class="button primary" href="#quick-start">Quick Start</a>
-            <a class="button" href="#public-surface">Public Surface</a>
-            <a class="button" href="#backends">Backends</a>
+            <a class="button" href="#initialization">Client Setup</a>
+            <a class="button" href="#core-methods">Core API</a>
+            <a class="button" href="#env-vars">Environment Variables</a>
           </div>
           <div class="chips" aria-label="Key characteristics">
-            <span class="chip">Library-first</span>
-            <span class="chip">Provider-agnostic LLM adapters</span>
-            <span class="chip">Memory retrieval</span>
-            <span class="chip">Hydration</span>
-            <span class="chip">Consolidation queue</span>
+            <span class="chip">Provider-Agnostic</span>
+            <span class="chip">Synchronous & Async Queues</span>
+            <span class="chip">Semantic Graph</span>
+            <span class="chip">Episodic Vectors</span>
           </div>
         </div>
         <aside class="hero-side">
@@ -400,12 +419,12 @@
             <div class="stat-value"><code>pip install gistlattice</code></div>
           </div>
           <div class="panel stat">
-            <div class="stat-label">Default mode</div>
-            <div class="stat-value">In-memory stores</div>
+            <div class="stat-label">Main Class</div>
+            <div class="stat-value"><code>GistLattice</code></div>
           </div>
           <div class="panel stat">
-            <div class="stat-label">Custom LLMs</div>
-            <div class="stat-value"><code>Settings.llm_factory</code></div>
+            <div class="stat-label">Simplicity</div>
+            <div class="stat-value">3 Core Methods</div>
           </div>
         </aside>
       </div>
@@ -415,13 +434,10 @@
           <h2>On this page</h2>
           <nav>
             <a href="#quick-start">Quick Start</a>
-            <a href="#public-surface">Public Surface</a>
-            <a href="#architecture">Architecture</a>
-            <a href="#backends">Backends</a>
-            <a href="#providers">Providers</a>
-            <a href="#configuration">Configuration</a>
-            <a href="#functions">Functions</a>
-            <a href="#examples">Examples</a>
+            <a href="#initialization">Client Setup</a>
+            <a href="#core-methods">Core Methods</a>
+            <a href="#env-vars">Environment Variables</a>
+            <a href="#backends">Production Backends</a>
           </nav>
         </aside>
 
@@ -429,238 +445,384 @@
           <section class="panel" id="quick-start">
             <h2>Quick Start</h2>
             <p>
-              The default configuration uses in-memory stores, so you can get started without Redis, Neo4j, or
-              Qdrant. You still need to provide an LLM adapter through <code>Settings.llm_factory</code> or
-              <code>Settings.llm_factory_path</code>.
+              GistLattice defaults to in-memory databases, meaning you can start prototyping immediately without spinning up Redis, Neo4j, or Qdrant. All you need is an API key for your LLM (like <code>OPENAI_API_KEY</code>).
             </p>
             <div class="code">
               <pre><code>import asyncio
+from gistlattice import GistLattice
 
-from gistlattice import Settings, build_default_service
+async def main():
+    # 1. Initialize the client
+    memory = GistLattice(provider="openai", tenant_id="my-app", user_id="user-123")
 
-
-async def main() -&gt; None:
-    service = build_default_service(
-        Settings(
-            environment="test",
-            llm_factory_path="my_project.providers.build_my_provider_llm",
-        )
-    )
-
-    retrieval = await service.retrieve(
-        tenant_id="tenant-a",
-        user_id="user-a",
-        query="Help me plan my next task.",
-    )
-    print(retrieval.hydrated_context)
-
-    job = await service.queue_consolidation(
-        tenant_id="tenant-a",
-        user_id="user-a",
+    # 2. Save an interaction synchronously
+    analysis = await memory.remember(
         prompt="Help me plan my next task.",
-        response="Here is a memory-bearing response from your own app.",
-        request_id="req-123",
+        response="I've added the Paris trip to your agenda."
     )
-    analysis = await service.consolidate(job.job_id)
-    print(analysis.gist)
+    print("Memory Saved:", analysis.gist)
 
+    # 3. Inject context into your next prompt
+    context = await memory.hydrate_context("What should I do next?")
+    print(context)
 
 asyncio.run(main())</code></pre>
             </div>
           </section>
 
-          <section class="panel" id="public-surface">
-            <h2>Public Surface</h2>
-            <p>
-              The package root exports only the small library surface users are expected to rely on.
-            </p>
-            <table>
+          <section class="panel" id="initialization">
+            <h2>Client Initialization (Kwargs)</h2>
+            <p>The <code>GistLattice</code> class accepts extensive keyword arguments to configure underlying behavior, overriding any set environment variables.</p>
+            
+            <table class="param-table">
               <thead>
                 <tr>
-                  <th>Symbol</th>
-                  <th>Purpose</th>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Description & Default</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><code>Settings</code></td>
-                  <td>Runtime configuration model and environment loader.</td>
+                  <td><code>provider</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>LLM provider (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>). Default: <code>openai</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>build_default_container(...)</code></td>
-                  <td>Builds a configured runtime container.</td>
+                  <td><code>tenant_id</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>The organization ID for multi-tenant isolation. Default: <code>default</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>build_default_service(...)</code></td>
-                  <td>Builds the ready-to-use memory service.</td>
+                  <td><code>user_id</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>The ID of the specific user. Default: <code>default</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>GistLatticeContainer</code></td>
-                  <td>Holds backend implementations and runtime state.</td>
+                  <td><code>llm_model</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Override default chat model (e.g., <code>gpt-4o</code>). Default: Varies by provider.</td>
                 </tr>
                 <tr>
-                  <td><code>GistLatticeService</code></td>
-                  <td>Provides retrieval, hydration, and consolidation APIs.</td>
+                  <td><code>embedding_provider</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Override the embedding provider (e.g., use <code>gemini</code> for embeddings and <code>openai</code> for chat). Default: Matches <code>provider</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>embedding_model</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Override default embedding model. Default: Varies by provider.</td>
+                </tr>
+                <tr>
+                  <td><code>episodic_store_backend</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Episodic vector memory (<code>memory</code> or <code>qdrant</code>). Default: <code>memory</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>semantic_store_backend</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Semantic graph memory (<code>memory</code> or <code>neo4j</code>). Default: <code>memory</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>queue_backend</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Background job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>qdrant_host</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>localhost</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>qdrant_port</code> <span class="badge optional">Optional</span></td>
+                  <td><code>int</code></td>
+                  <td>Default: <code>6333</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>qdrant_collection</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>user_episodic_stream</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>qdrant_vector_size</code> <span class="badge optional">Optional</span></td>
+                  <td><code>int</code></td>
+                  <td>Manually set Qdrant vector size. Default: Auto-detected.</td>
+                </tr>
+                <tr>
+                  <td><code>neo4j_uri</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>bolt://localhost:7687</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>neo4j_username</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>neo4j</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>neo4j_password</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>password</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>redis_url</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>redis://localhost:6379/0</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>redis_queue_name</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>memory-consolidation</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>redis_processing_name</code> <span class="badge optional">Optional</span></td>
+                  <td><code>str</code></td>
+                  <td>Default: <code>memory-consolidation:processing</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>memory_limit</code> <span class="badge optional">Optional</span></td>
+                  <td><code>int</code></td>
+                  <td>Default number of memories retrieved per query. Default: <code>3</code>.</td>
                 </tr>
               </tbody>
             </table>
           </section>
 
-          <section class="panel" id="architecture">
-            <h2>Architecture</h2>
-            <p>
-              GistLattice is built around a single service layer. It stays in-process and does not expose HTTP routes
-              in this repository.
-            </p>
+          <section class="panel" id="core-methods">
+            <h2>The 3 Core Methods</h2>
+            
+            <h3>1. <code>remember()</code></h3>
+            <p>Takes a recent conversation, hands it to an LLM for psychological and semantic reflection, and stores the resulting structured memory durably.</p>
+            <table class="param-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>prompt</code> <span class="badge">Required</span></td>
+                  <td><code>str</code></td>
+                  <td>The message the user sent.</td>
+                </tr>
+                <tr>
+                  <td><code>response</code> <span class="badge">Required</span></td>
+                  <td><code>str</code></td>
+                  <td>The message the AI agent replied with.</td>
+                </tr>
+                <tr>
+                  <td><code>run_in_background</code> <span class="badge optional">Optional</span></td>
+                  <td><code>bool</code></td>
+                  <td>If <code>True</code>, pushes the job to a queue (like Redis) and immediately returns a Job ID. If <code>False</code> (default), processes synchronously and returns a <code>MemoryAnalysis</code> object.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <br/>
+            <h3>2. <code>hydrate_context()</code></h3>
+            <p>Searches the database for memories relevant to the upcoming prompt, and formats them into a perfectly constructed "System Prompt" string that you can inject into your LLM.</p>
+            <table class="param-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>prompt</code> <span class="badge">Required</span></td>
+                  <td><code>str</code></td>
+                  <td>The upcoming query the user is about to ask. GistLattice uses this to find the most semantically relevant past memories.</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <br/>
+            <h3>3. <code>retrieve()</code></h3>
+            <p>Fetches the raw structured memory objects. Use this instead of <code>hydrate_context</code> if you want to write your own custom prompt formatter.</p>
+            <table class="param-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>query</code> <span class="badge">Required</span></td>
+                  <td><code>str</code></td>
+                  <td>The search string used to find relevant vector embeddings.</td>
+                </tr>
+                <tr>
+                  <td><code>limit</code> <span class="badge optional">Optional</span></td>
+                  <td><code>int</code></td>
+                  <td>The maximum number of memories to return. Defaults to <code>memory_limit</code> setting (which defaults to 3).</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="panel" id="async-queue">
+            <h2>Async Queue Processing (Background Workers)</h2>
+            <p>For high-traffic applications, you do not want to block your user's web request waiting for an LLM to analyze a memory. You can queue the task asynchronously so it executes in the background.</p>
             <div class="code">
-              <pre><code>Your Python app
-  -&gt; GistLatticeService
-  -&gt; GistLatticeContainer
-  -&gt; LLM client
-  -&gt; Episodic store
-  -&gt; Semantic store
-  -&gt; Queue broker
-  -&gt; Consolidation worker
-  -&gt; long-term memory stores</code></pre>
-            </div>
-            <p>
-              The public flow is simple: retrieve memory, hydrate context, queue consolidation, then let the worker
-              finalize it.
-            </p>
-          </section>
+              <pre><code>import asyncio
+from gistlattice import GistLattice
 
-          <section class="panel" id="backends">
-            <h2>Backends</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Layer</th>
-                  <th>Options</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>LLM adapter</td>
-                  <td>Required, provided through <code>Settings.llm_factory</code> or <code>Settings.llm_factory_path</code></td>
-                </tr>
-                <tr>
-                  <td>Episodic store</td>
-                  <td><code>memory</code>, <code>qdrant</code></td>
-                </tr>
-                <tr>
-                  <td>Semantic store</td>
-                  <td><code>memory</code>, <code>neo4j</code></td>
-                </tr>
-                <tr>
-                  <td>Queue</td>
-                  <td><code>memory</code>, <code>redis</code></td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="callout" style="margin-top: 16px;">
-              <strong>Custom LLM adapters</strong>
-              <span>
-                For provider-agnostic usage, point <code>Settings.llm_factory_path</code> at a factory or pass a
-                callable to <code>Settings.llm_factory</code>. The adapter only needs
-                <code>embed_text(...)</code> and <code>analyze_interaction(...)</code>.
-              </span>
+async def main():
+    # Configure with Redis for distributed background tasks
+    memory = GistLattice(
+        provider="openai", 
+        queue_backend="redis", 
+        redis_url="redis://localhost:6379"
+    )
+
+    # By setting run_in_background=True, the system instantly queues the 
+    # memory and returns a Job ID string instead of a MemoryAnalysis object.
+    job_id = await memory.remember(
+        prompt="I feel really overwhelmed with this project.",
+        response="Let's break it down into smaller steps.",
+        run_in_background=True
+    )
+    
+    print(f"Instantly queued job: {job_id}")
+    # The user's web request completes instantly.
+    # A separate worker process consumes the job and saves it to the database!
+
+asyncio.run(main())</code></pre>
             </div>
           </section>
 
-          <section class="panel" id="providers">
-            <h2>Provider Adapters</h2>
-            <p>
-              GistLattice includes ready-made provider factories for OpenAI, Gemini, Ollama, and Anthropic. OpenAI,
-              Gemini, and Ollama can provide both embeddings and memory analysis. Anthropic is analysis-only and
-              needs a separate embedding provider.
-            </p>
-            <p>
-              See the full guide in <a href="providers.md">Provider Adapters</a> for install extras, environment
-              variables, and examples.
-            </p>
-          </section>
+          <section class="panel" id="env-vars">
+            <h2>Environment Variables</h2>
+            <p>Instead of passing configuration programmatically into <code>GistLattice(redis_url="...")</code>, you can define them in your environment or a <code>.env</code> file. Environment variables act as the global defaults across your app.</p>
+            
+            <div class="callout">
+              <strong>Precedence Rules</strong>
+              <span>If you explicitly pass a keyword argument to <code>GistLattice(llm_model="gpt-4")</code>, it will override the environment variable completely.</span>
+            </div>
 
-          <section class="panel" id="configuration">
-            <h2>Configuration</h2>
-            <p>
-              Configuration comes from environment variables via <code>Settings.from_env()</code>. For Python-native
-              usage, you can also construct <code>Settings</code> directly and pass a callable to
-              <code>Settings.llm_factory</code>.
-            </p>
-            <table>
+            <table class="env-table">
               <thead>
                 <tr>
-                  <th>Variable</th>
-                  <th>Purpose</th>
+                  <th>Environment Variable</th>
+                  <th>Description & Default</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td><code>GISTLATTICE_ENV</code></td>
-                  <td>Runtime environment name.</td>
+                  <td>Runtime environment. Default: <code>development</code>.</td>
                 </tr>
                 <tr>
-                  <td><code>GISTLATTICE_LLM_FACTORY_PATH</code></td>
-                  <td>Import path for a custom LLM factory.</td>
+                  <td><code>GISTLATTICE_LLM_PROVIDER</code></td>
+                  <td>Default LLM (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>).</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_LLM_MODEL</code></td>
+                  <td>Overrides the default chat model.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_EMBEDDING_PROVIDER</code></td>
+                  <td>Separate provider for embeddings. Defaults to LLM_PROVIDER.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_EMBEDDING_MODEL</code></td>
+                  <td>Overrides the default embedding model.</td>
                 </tr>
                 <tr>
                   <td><code>GISTLATTICE_EPISODIC_BACKEND</code></td>
-                  <td>Episodic memory backend.</td>
+                  <td>Vector storage (<code>memory</code> or <code>qdrant</code>). Default: <code>memory</code>.</td>
                 </tr>
                 <tr>
                   <td><code>GISTLATTICE_SEMANTIC_BACKEND</code></td>
-                  <td>Semantic memory backend.</td>
+                  <td>Graph storage (<code>memory</code> or <code>neo4j</code>). Default: <code>memory</code>.</td>
                 </tr>
                 <tr>
                   <td><code>GISTLATTICE_QUEUE_BACKEND</code></td>
-                  <td>Consolidation queue backend.</td>
+                  <td>Job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_QDRANT_HOST</code></td>
+                  <td>Default: <code>localhost</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_QDRANT_PORT</code></td>
+                  <td>Default: <code>6333</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_QDRANT_COLLECTION</code></td>
+                  <td>Default: <code>user_episodic_stream</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_QDRANT_VECTOR_SIZE</code></td>
+                  <td>Manually set dimension size.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_NEO4J_URI</code></td>
+                  <td>Default: <code>bolt://localhost:7687</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_NEO4J_USERNAME</code></td>
+                  <td>Default: <code>neo4j</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_NEO4J_PASSWORD</code></td>
+                  <td>Default: <code>password</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_REDIS_URL</code></td>
+                  <td>Default: <code>redis://localhost:6379/0</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_REDIS_QUEUE_NAME</code></td>
+                  <td>Default: <code>memory-consolidation</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>GISTLATTICE_REDIS_PROCESSING_NAME</code></td>
+                  <td>Default: <code>memory-consolidation:processing</code>.</td>
                 </tr>
                 <tr>
                   <td><code>GISTLATTICE_MEMORY_LIMIT</code></td>
-                  <td>Default number of memories to retrieve.</td>
+                  <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
                 </tr>
               </tbody>
             </table>
           </section>
 
-          <section class="panel" id="functions">
-            <h2>Functions</h2>
-            <p>
-              The main service methods you will call are <code>retrieve(...)</code>,
-              <code>hydrate_context(...)</code>, <code>build_hydrated_prompt(...)</code>,
-              <code>queue_consolidation(...)</code>, and <code>consolidate(...)</code>.
-            </p>
-            <p>
-              For full method details, see the Markdown reference in the repository or browse the source directly.
-            </p>
-            <p>
-              <a href="functions.md">Open the functions reference</a>
-              <span aria-hidden="true">·</span>
-              <a href="getting-started.md">Read the getting started guide</a>
-            </p>
-          </section>
-
-          <section class="panel" id="examples">
-            <h2>Examples</h2>
-            <p>
-              The repository includes a full runnable walkthrough in
-              <a href="../examples/README.md">examples/README.md</a> and
-              <a href="../examples/deep_usage.py">examples/deep_usage.py</a>.
-            </p>
-            <p>
-              It shows how to wire a custom adapter, retrieve memory, hydrate context, and consolidate an
-              interaction end to end.
-            </p>
-            <p>
-              The same directory also includes <a href="../examples/openai_usage.py">examples/openai_usage.py</a>,
-              which demonstrates the provider-backed pattern using the OpenAI helper.
-            </p>
+          <section class="panel" id="backends">
+            <h2>Moving to Production Databases</h2>
+            <p>When you are ready to scale, simply install the required extras and update your parameters. The API remains exactly the same.</p>
+            <div class="code">
+              <pre><code>pip install gistlattice[qdrant,neo4j,redis]</code></pre>
+            </div>
+            <p style="margin-top: 14px;">Then configure the client:</p>
+            <div class="code">
+              <pre><code>memory = GistLattice(
+    # Core
+    provider="openai",
+    
+    # Backends
+    episodic_store_backend="qdrant",
+    semantic_store_backend="neo4j",
+    queue_backend="redis",
+    
+    # Auth
+    qdrant_host="localhost",
+    neo4j_uri="bolt://localhost:7687",
+    neo4j_password="secure_password",
+    redis_url="redis://localhost:6379"
+)</code></pre>
+            </div>
           </section>
         </div>
       </div>
 
       <div class="panel footer">
-        Built for GitHub Pages. Source docs live alongside this page in the <code>docs/</code> directory.
+        GistLattice Documentation &middot; Memory infrastructure for Python agents
       </div>
     </main>
   </body>

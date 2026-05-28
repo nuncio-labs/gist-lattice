@@ -1,89 +1,80 @@
-# Backends
+# Production Backends
 
-GistLattice keeps the runtime modular so you can switch backend providers without rewriting your app.
+By default, GistLattice runs completely in-memory. This is fantastic for prototyping and unit tests, but data is lost the moment your Python process shuts down.
 
-## LLM Adapter
+When you are ready to persist your AI's memories, you can connect GistLattice to three powerful, scalable backends.
 
-| Adapter requirement | When To Use | Install |
-| --- | --- | --- |
-| Custom provider adapter | Always required | no extra required |
+## 1. Install Dependencies
 
-You can either:
-
-- provide a custom adapter via `Settings.llm_factory` or `Settings.llm_factory_path`
-- set `Settings.llm_provider` and optional separate embedding provider/model fields
-
-The library will build the configured adapter for you when provider-based settings are used.
-
-For ready-made provider helpers, see [Provider Adapters](./providers.md).
-
-## Custom Provider Adapters
-
-Custom LLM adapters let you use any hosted API, local runtime, or hybrid stack without changing the core library.
-
-Your factory must return an object with:
-
-- `embed_text(text)`
-- `analyze_interaction(prompt, response)`
-
-You can wire it in one of two ways:
-
-- set `Settings.llm_factory_path` for environment-driven setup
-- pass a callable directly to `Settings.llm_factory` in Python code
-
-If you want the library to assemble the provider objects for you, set:
-
-- `Settings.llm_provider`
-- `Settings.llm_model`
-- `Settings.embedding_provider` if it differs from the analysis provider
-- `Settings.embedding_model` if you want a non-default embedding model
-
-Example:
-
-```python
-from gistlattice import Settings, build_default_service
-from my_project.providers import build_my_provider_llm
-
-settings = Settings(
-    llm_factory=build_my_provider_llm,
-)
-service = build_default_service(settings)
+You must install the driver packages for the backends you intend to use:
+```bash
+pip install gistlattice[qdrant,neo4j,redis]
 ```
 
-## Episodic Memory Backends
+## 2. The Three Infrastructure Layers
 
-| Backend | When To Use | Install |
-| --- | --- | --- |
-| `memory` | Local development and tests | no extra |
-| `qdrant` | Durable vector recall | `pip install gistlattice[qdrant]` |
+GistLattice divides memory into three distinct architectural layers:
 
-Qdrant-backed episodic memory now supports either of two sizing modes:
+### A. Episodic Store (Qdrant)
+Handles rapid vector-based retrieval of specific conversation chunks. 
+- **Activate:** `episodic_store_backend="qdrant"`
 
-- set `GISTLATTICE_QDRANT_VECTOR_SIZE` when you already know the embedding width
-- leave it unset to let GistLattice create the collection from the first stored embedding
+### B. Semantic Store (Neo4j)
+Maintains a living knowledge graph of concepts, states, and relationships (e.g., extracting that the user is located in "Paris" or currently focused on "Project X").
+- **Activate:** `semantic_store_backend="neo4j"`
 
-If you use a custom LLM adapter, make sure its embedding dimensions stay stable for a given deployment.
+### C. Queue Broker (Redis)
+Allows for asynchronous, non-blocking execution of memory reflection. Prevents your user-facing web requests from hanging while waiting for the LLM to analyze the conversation.
+- **Activate:** `queue_backend="redis"`
 
-## Semantic Memory Backends
+---
 
-| Backend | When To Use | Install |
-| --- | --- | --- |
-| `memory` | Local development and tests | no extra |
-| `neo4j` | Durable semantic/state graph | `pip install gistlattice[neo4j]` |
+## 3. Configuration Approaches
 
-## Queue Backends
+You can configure these backends in two ways: programmatically in Python, or globally via Environment Variables.
 
-| Backend | When To Use | Install |
-| --- | --- | --- |
-| `memory` | Local development and tests | no extra |
-| `redis` | Durable consolidation queue | `pip install gistlattice[redis]` |
+### Approach 1: Programmatic Configuration
+Pass the configurations directly into the `GistLattice` client.
 
-Both queue implementations preserve FIFO job ordering, so switching from memory to Redis should not change processing order.
+```python
+from gistlattice import GistLattice
 
-## How Selection Works
+memory = GistLattice(
+    provider="openai",
+    
+    # 1. Enable Backends
+    episodic_store_backend="qdrant",
+    semantic_store_backend="neo4j",
+    queue_backend="redis",
+    
+    # 2. Provide Credentials
+    qdrant_host="localhost",
+    neo4j_uri="bolt://localhost:7687",
+    neo4j_password="my_secure_password",
+    redis_url="redis://localhost:6379/0"
+)
+```
 
-The `GistLatticeContainer.from_settings(...)` classmethod reads the selected storage backend names from `Settings` and wires the matching implementations together.
+### Approach 2: Environment Variables (Recommended)
+Define everything in a `.env` file or your OS environment. The `GistLattice` client will automatically absorb them without needing manual configuration.
 
-For LLM providers, the library intentionally stays provider-agnostic. Your custom factory can wrap any SDK or local runtime you want, including hosted APIs, local models, or hybrid pipelines. The adapter is always required and is supplied separately through `Settings`.
+```bash
+# .env file
+GISTLATTICE_LLM_PROVIDER=openai
 
-See [Architecture](./architecture.md) for the full flow.
+GISTLATTICE_EPISODIC_BACKEND=qdrant
+GISTLATTICE_SEMANTIC_BACKEND=neo4j
+GISTLATTICE_QUEUE_BACKEND=redis
+
+GISTLATTICE_QDRANT_HOST=localhost
+GISTLATTICE_NEO4J_URI=bolt://localhost:7687
+GISTLATTICE_NEO4J_PASSWORD=my_secure_password
+GISTLATTICE_REDIS_URL=redis://localhost:6379/0
+```
+
+```python
+from gistlattice import GistLattice
+
+# The client instantly picks up all settings from the environment!
+memory = GistLattice()
+```

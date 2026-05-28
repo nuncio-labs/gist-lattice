@@ -102,6 +102,26 @@ class GistLatticeService:
             ],
         )
 
+    async def remember(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str,
+        prompt: str,
+        response: str,
+        interaction_id: str | None = None,
+    ) -> MemoryAnalysis:
+        job = ConsolidationJob(
+            job_id=uuid4().hex,
+            interaction_id=interaction_id or uuid4().hex,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            prompt=prompt,
+            response=response,
+            request_id=uuid4().hex,
+        )
+        return await self.consolidate(job)
+
     async def queue_consolidation(
         self,
         *,
@@ -129,19 +149,29 @@ class GistLatticeService:
         await self.container.queue.enqueue(job)
         return job
 
-    async def consolidate(self, job_id: str) -> MemoryAnalysis:
-        job = self.container.job_store.get(job_id)
-        if job is None:
-            raise KeyError(f"Unknown consolidation job: {job_id}")
+    async def consolidate(self, job: ConsolidationJob | str) -> MemoryAnalysis:
+        if isinstance(job, str):
+            job_id = job
+            job_obj = self.container.job_store.get(job_id)
+            if job_obj is None:
+                raise KeyError(f"Unknown consolidation job: {job_id}")
+            job = job_obj
+        else:
+            job_id = job.job_id
+
         if self.container.job_status.get(job_id) == "completed":
             analysis = self.container.job_results.get(job_id)
             if analysis is not None:
                 return analysis
             analysis = await self.container.llm.analyze_interaction(prompt=job.prompt, response=job.response)
+            if isinstance(analysis, dict):
+                analysis = MemoryAnalysis.model_validate(analysis)
             self.container.job_results[job_id] = analysis
             return analysis
 
         analysis = await self.container.llm.analyze_interaction(prompt=job.prompt, response=job.response)
+        if isinstance(analysis, dict):
+            analysis = MemoryAnalysis.model_validate(analysis)
         await self.finalize_consolidation(job, analysis)
         self.container.job_status[job_id] = "completed"
         return analysis
