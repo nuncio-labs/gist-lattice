@@ -12,9 +12,12 @@ python 01_basic_openai_sync.py
 
 # 2. Gemini LLM + OpenAI Embeddings with asynchronous background queues
 python 02_hybrid_gemini_async.py
+
+# 3. Full Agent Architecture (Short-Term Buffer + Long-Term Async Memory)
+python 05_full_agent_loop.py
 ```
 
-## Production Examples (Redis, Neo4j, Qdrant)
+## Production Examples (Redis, Neo4j, Postgres)
 
 If you are ready to test GistLattice with actual production databases, navigate to the `production/` subdirectory.
 

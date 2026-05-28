@@ -1,829 +1,954 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GistLattice Docs</title>
-    <meta
-      name="description"
-      content="GistLattice is a Python memory management library for agents and long-lived apps."
-    />
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GistLattice Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-      :root {
-        color-scheme: light;
-        --bg: #f4efe7;
-        --bg-soft: #fffaf2;
-        --panel: rgba(255, 255, 255, 0.78);
-        --panel-strong: #fffdf8;
-        --text: #1f2430;
-        --muted: #5b6475;
-        --border: rgba(31, 36, 48, 0.12);
-        --accent: #214e66;
-        --accent-2: #8b5e34;
-        --shadow: 0 24px 80px rgba(30, 41, 59, 0.14);
-        --radius: 22px;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html {
-        scroll-behavior: smooth;
-      }
-
-      body {
-        margin: 0;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: var(--text);
-        background:
-          radial-gradient(circle at top left, rgba(33, 78, 102, 0.14), transparent 35%),
-          radial-gradient(circle at top right, rgba(139, 94, 52, 0.12), transparent 28%),
-          linear-gradient(180deg, var(--bg), #fbf7f0 45%, #f7f2ea 100%);
-      }
-
-      a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-
-      a:hover {
-        text-decoration: underline;
-      }
-
-      .shell {
-        max-width: 1220px;
-        margin: 0 auto;
-        padding: 32px 20px 72px;
-      }
-
-      .hero {
-        display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
-        gap: 22px;
-        align-items: stretch;
-        margin-bottom: 22px;
-      }
-
-      .panel {
-        background: var(--panel);
-        backdrop-filter: blur(18px);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-      }
-
-      .hero-main {
-        padding: 34px;
-      }
-
-      .eyebrow {
-        display: inline-flex;
-        gap: 10px;
-        align-items: center;
-        font-size: 0.78rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--accent-2);
-        margin-bottom: 18px;
-      }
-
-      .eyebrow::before {
-        content: "";
-        width: 10px;
-        height: 10px;
-        border-radius: 999px;
-        background: var(--accent-2);
-      }
-
-      h1,
-      h2,
-      h3,
-      h4 {
-        margin: 0;
-        line-height: 1.1;
-      }
-
-      h1 {
-        font-size: clamp(2.5rem, 5vw, 4.6rem);
-        max-width: 11ch;
-        letter-spacing: -0.05em;
-      }
-
-      .lede {
-        margin: 18px 0 0;
-        max-width: 62ch;
-        font-size: 1.05rem;
-        line-height: 1.7;
-        color: var(--muted);
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 26px;
-      }
-
-      .button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 44px;
-        padding: 0 16px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel-strong);
-        color: var(--text);
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .button.primary {
-        background: var(--accent);
-        border-color: transparent;
-        color: #fff;
-      }
-
-      .hero-side {
-        display: grid;
-        gap: 14px;
-      }
-
-      .stat {
-        padding: 22px;
-      }
-
-      .stat-label {
-        font-size: 0.82rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--muted);
-      }
-
-      .stat-value {
-        margin-top: 8px;
-        font-size: 1.4rem;
-        font-weight: 700;
-        letter-spacing: -0.03em;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
-        gap: 22px;
-      }
-
-      .toc {
-        position: sticky;
-        top: 20px;
-        align-self: start;
-        padding: 20px;
-      }
-
-      .toc h2 {
-        font-size: 0.95rem;
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        color: var(--muted);
-        margin-bottom: 14px;
-      }
-
-      .toc nav {
-        display: grid;
-        gap: 8px;
-      }
-
-      .toc a {
-        display: block;
-        padding: 10px 12px;
-        border-radius: 12px;
-        color: var(--text);
-        border: 1px solid transparent;
-        transition: all 0.2s;
-      }
-
-      .toc a:hover {
-        background: rgba(33, 78, 102, 0.06);
-        border-color: rgba(33, 78, 102, 0.12);
-        text-decoration: none;
-      }
-
-      .content {
-        display: grid;
-        gap: 18px;
-      }
-
-      section {
-        padding: 26px 28px;
-        overflow-x: auto;
-      }
-
-      section h2 {
-        font-size: 1.55rem;
-        margin-bottom: 14px;
-        letter-spacing: -0.03em;
-      }
-
-      section p,
-      section li {
-        color: var(--muted);
-        line-height: 1.7;
-      }
-
-      ul {
-        margin: 0;
-        padding-left: 20px;
-      }
-
-      .callout {
-        display: grid;
-        gap: 10px;
-        padding: 18px 20px;
-        border-left: 4px solid var(--accent);
-        background: rgba(33, 78, 102, 0.05);
-        border-radius: 16px;
-      }
-
-      .code {
-        margin: 16px 0 0;
-        overflow: auto;
-        border-radius: 18px;
-        background: #18202d;
-        color: #e8edf7;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-      }
-
-      pre {
-        margin: 0;
-        padding: 18px 20px;
-        font-size: 0.92rem;
-        line-height: 1.65;
-        overflow-x: auto;
-      }
-
-      code {
-        font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Consolas, monospace;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 14px;
-        overflow-x: auto;
-        border-radius: 18px;
-        border: 1px solid var(--border);
-        display: block;
-      }
-
-      th,
-      td {
-        padding: 14px 16px;
-        text-align: left;
-        vertical-align: top;
-        border-bottom: 1px solid var(--border);
-      }
-
-      th {
-        background: rgba(33, 78, 102, 0.05);
-        color: var(--text);
-        font-size: 0.92rem;
-      }
-
-      td {
-        background: rgba(255, 255, 255, 0.4);
-        color: var(--muted);
-      }
-
-      tr:last-child td {
-        border-bottom: 0;
-      }
-
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 18px;
-      }
-
-      .chip {
-        padding: 8px 12px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.65);
-        font-size: 0.9rem;
-        color: var(--muted);
-        transition: transform 0.2s, background 0.2s;
-      }
-
-      .chip:hover {
-        transform: translateY(-2px);
-        background: #fff;
-      }
-
-      .footer {
-        margin-top: 22px;
-        padding: 18px 22px;
-        color: var(--muted);
-        font-size: 0.95rem;
-        text-align: center;
-      }
-
-      .param-table td:first-child, .env-table td:first-child {
-        font-weight: 600;
-        color: var(--text);
-        white-space: nowrap;
-      }
-
-      .badge {
-        display: inline-block;
-        font-size: 0.75rem;
-        padding: 2px 6px;
-        border-radius: 6px;
-        background: var(--accent);
-        color: white;
-        margin-left: 8px;
-        vertical-align: middle;
-      }
-
-      .badge.optional {
-        background: #8b5e34;
-      }
-
-      @media (max-width: 960px) {
-        .hero,
-        .grid {
-          grid-template-columns: 1fr;
+        :root {
+            /* Color Palette */
+            --bg-base: #0B0F19;
+            --bg-surface: #131A2B;
+            --bg-glass: rgba(19, 26, 43, 0.6);
+            --bg-glass-hover: rgba(19, 26, 43, 0.8);
+            
+            --border-light: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.15);
+            
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            
+            --accent-primary: #3B82F6;
+            --accent-secondary: #8B5CF6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --accent-gradient: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+            
+            --danger: #EF4444;
+            --success: #10B981;
+            --warning: #F59E0B;
+            
+            /* Typography */
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            /* Sizing & Spacing */
+            --sidebar-width: 280px;
+            --content-max-width: 900px;
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 20px;
+            
+            /* Effects */
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.3s ease;
+            --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
         }
 
-        .toc {
-          position: static;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        .hero-main,
-        section {
-          padding: 22px;
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            line-height: 1.6;
+            display: flex;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.05), transparent 25%);
+            background-attachment: fixed;
         }
-      }
 
-      @media (max-width: 640px) {
-        .shell {
-          padding: 18px 14px 56px;
+        /* Typography */
+        h1, h2, h3, h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
         }
 
         h1 {
-          max-width: 100%;
+            font-size: 3rem;
+            letter-spacing: -0.02em;
+            margin-top: 0;
         }
 
-        .actions {
-          flex-direction: column;
+        h2 {
+            font-size: 2rem;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 0.5rem;
+            margin-top: 4rem;
         }
 
-        .button {
-          width: 100%;
+        h3 {
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
         }
 
-        table,
+        p {
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            font-size: 1.05rem;
+        }
+
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            transition: color var(--transition-fast);
+        }
+
+        a:hover {
+            color: #60A5FA;
+            text-decoration: underline;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        .gradient-text {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+        }
+
+        /* Layout */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border-light);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-brand svg {
+            width: 28px;
+            height: 28px;
+            color: var(--accent-primary);
+        }
+
+        .nav-group {
+            margin-bottom: 2rem;
+        }
+
+        .nav-group-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            border-radius: var(--border-radius-sm);
+            transition: all var(--transition-fast);
+            margin-bottom: 0.25rem;
+            text-decoration: none !important;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-primary);
+            font-weight: 500;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 4rem 3rem;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .content-container {
+            max-width: var(--content-max-width);
+            margin: 0 auto;
+        }
+
+        /* Components */
+        .hero-section {
+            padding: 4rem 0 3rem;
+            text-align: left;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 99px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--accent-primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border-color: var(--border-hover);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Code Blocks */
         pre {
-          font-size: 0.88rem;
+            background: #000;
+            border: 1px solid var(--border-light);
+            border-radius: var(--border-radius-md);
+            padding: 1.25rem 1.5rem;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
-      }
+
+        code {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: #E2E8F0;
+        }
+
+        p code, li code, td code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.875em;
+            color: #93C5FD;
+        }
+
+        /* Callouts / Alerts */
+        .callout {
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius-md);
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .callout-icon {
+            font-size: 1.25rem;
+            margin-top: 0.1rem;
+        }
+
+        .callout-content p {
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+        
+        .callout-content p:not(:last-child) {
+            margin-bottom: 0.5rem;
+        }
+
+        .callout.info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: #BFDBFE;
+        }
+
+        .callout.info .callout-content p { color: #BFDBFE; }
+
+        .callout.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #FDE68A;
+        }
+        
+        .callout.warning .callout-content p { color: #FDE68A; }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--border-light);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            background: var(--bg-surface);
+        }
+
+        th, td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        td {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            vertical-align: top;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 0.5rem;
+        }
+
+        .badge.required { background: rgba(239, 68, 68, 0.2); color: #FCA5A5; }
+        .badge.optional { background: rgba(148, 163, 184, 0.2); color: #CBD5E1; }
+
+        /* Lists */
+        ul, ol {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            font-size: 1.05rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Syntax Highlighting overrides */
+        .token.comment { color: #64748B; font-style: italic; }
+        .token.keyword { color: #C586C0; }
+        .token.string { color: #CE9178; }
+        .token.function { color: #DCDCAA; }
+        .token.class-name { color: #4EC9B0; }
+        .token.operator { color: #D4D4D4; }
+        .token.number { color: #B5CEA8; }
+
+        /* Story Chat Bubbles */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #000;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--border-light);
+        }
+        
+        .chat-bubble {
+            max-width: 80%;
+            padding: 1rem 1.25rem;
+            border-radius: var(--border-radius-md);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .chat-user {
+            align-self: flex-end;
+            background: var(--accent-primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-agent {
+            align-self: flex-start;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .chat-system {
+            align-self: center;
+            background: rgba(139, 92, 246, 0.1);
+            color: #C4B5FD;
+            border: 1px dashed rgba(139, 92, 246, 0.3);
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            text-align: center;
+            max-width: 90%;
+            padding: 0.75rem 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform var(--transition-normal);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+                padding: 2rem 1.5rem;
+            }
+            /* Hamburger menu button would go here */
+        }
     </style>
-  </head>
-  <body>
-    <main class="shell">
-      <div class="hero">
-        <div class="panel hero-main">
-          <div class="eyebrow">GistLattice Documentation</div>
-          <h1>Cognitive Memory for AI Agents.</h1>
-          <p class="lede">
-            GistLattice is an elegant, three-method Python library for retrieval, hydration, and consolidation of long-lived memory. It analyzes conversations, extracts emotional valences, and intelligently injects context into your LLM prompts.
-          </p>
-          <div class="actions">
-            <a class="button primary" href="#quick-start">Quick Start</a>
-            <a class="button" href="#initialization">Client Setup</a>
-            <a class="button" href="#core-methods">Core API</a>
-            <a class="button" href="#env-vars">Environment Variables</a>
-          </div>
-          <div class="chips" aria-label="Key characteristics">
-            <span class="chip">Provider-Agnostic</span>
-            <span class="chip">Synchronous & Async Queues</span>
-            <span class="chip">Semantic Graph</span>
-            <span class="chip">Episodic Vectors</span>
-          </div>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            GistLattice
         </div>
-        <aside class="hero-side">
-          <div class="panel stat">
-            <div class="stat-label">Install</div>
-            <div class="stat-value"><code>pip install gistlattice</code></div>
-          </div>
-          <div class="panel stat">
-            <div class="stat-label">Main Class</div>
-            <div class="stat-value"><code>GistLattice</code></div>
-          </div>
-          <div class="panel stat">
-            <div class="stat-label">Simplicity</div>
-            <div class="stat-value">3 Core Methods</div>
-          </div>
-        </aside>
-      </div>
 
-      <div class="grid">
-        <aside class="panel toc" aria-label="Table of contents">
-          <h2>On this page</h2>
-          <nav>
-            <a href="#quick-start">Quick Start</a>
-            <a href="#initialization">Client Setup</a>
-            <a href="#core-methods">Core Methods</a>
-            <a href="#env-vars">Environment Variables</a>
-            <a href="#backends">Production Backends</a>
-          </nav>
-        </aside>
-
-        <div class="content">
-          <section class="panel" id="quick-start">
-            <h2>Quick Start</h2>
-            <p>
-              GistLattice defaults to in-memory databases, meaning you can start prototyping immediately without spinning up Redis, Neo4j, or Qdrant. All you need is an API key for your LLM (like <code>OPENAI_API_KEY</code>).
-            </p>
-            <div class="code">
-              <pre><code>import asyncio
-from gistlattice import GistLattice
-
-async def main():
-    # 1. Initialize the client
-    memory = GistLattice(provider="openai", tenant_id="my-app", user_id="user-123")
-
-    # 2. Save an interaction synchronously
-    analysis = await memory.remember(
-        prompt="Help me plan my next task.",
-        response="I've added the Paris trip to your agenda."
-    )
-    print("Memory Saved:", analysis.gist)
-
-    # 3. Inject context into your next prompt
-    context = await memory.hydrate_context("What should I do next?")
-    print(context)
-
-asyncio.run(main())</code></pre>
-            </div>
-          </section>
-
-          <section class="panel" id="initialization">
-            <h2>Client Initialization (Kwargs)</h2>
-            <p>The <code>GistLattice</code> class accepts extensive keyword arguments to configure underlying behavior, overriding any set environment variables.</p>
-            
-            <table class="param-table">
-              <thead>
-                <tr>
-                  <th>Parameter</th>
-                  <th>Type</th>
-                  <th>Description & Default</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>provider</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>LLM provider (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>). Default: <code>openai</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>tenant_id</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>The organization ID for multi-tenant isolation. Default: <code>default</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>user_id</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>The ID of the specific user. Default: <code>default</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>llm_model</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Override default chat model (e.g., <code>gpt-4o</code>). Default: Varies by provider.</td>
-                </tr>
-                <tr>
-                  <td><code>embedding_provider</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Override the embedding provider (e.g., use <code>gemini</code> for embeddings and <code>openai</code> for chat). Default: Matches <code>provider</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>embedding_model</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Override default embedding model. Default: Varies by provider.</td>
-                </tr>
-                <tr>
-                  <td><code>episodic_store_backend</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Episodic vector memory (<code>memory</code> or <code>qdrant</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>semantic_store_backend</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Semantic graph memory (<code>memory</code> or <code>neo4j</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>queue_backend</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Background job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>qdrant_host</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>localhost</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>qdrant_port</code> <span class="badge optional">Optional</span></td>
-                  <td><code>int</code></td>
-                  <td>Default: <code>6333</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>qdrant_collection</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>user_episodic_stream</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>qdrant_vector_size</code> <span class="badge optional">Optional</span></td>
-                  <td><code>int</code></td>
-                  <td>Manually set Qdrant vector size. Default: Auto-detected.</td>
-                </tr>
-                <tr>
-                  <td><code>neo4j_uri</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>bolt://localhost:7687</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>neo4j_username</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>neo4j</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>neo4j_password</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>password</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>redis_url</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>redis://localhost:6379/0</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>redis_queue_name</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>memory-consolidation</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>redis_processing_name</code> <span class="badge optional">Optional</span></td>
-                  <td><code>str</code></td>
-                  <td>Default: <code>memory-consolidation:processing</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>memory_limit</code> <span class="badge optional">Optional</span></td>
-                  <td><code>int</code></td>
-                  <td>Default number of memories retrieved per query. Default: <code>3</code>.</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section class="panel" id="core-methods">
-            <h2>The 3 Core Methods</h2>
-            
-            <h3>1. <code>remember()</code></h3>
-            <p>Takes a recent conversation, hands it to an LLM for psychological and semantic reflection, and stores the resulting structured memory durably.</p>
-            <table class="param-table">
-              <thead>
-                <tr>
-                  <th>Parameter</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>prompt</code> <span class="badge">Required</span></td>
-                  <td><code>str</code></td>
-                  <td>The message the user sent.</td>
-                </tr>
-                <tr>
-                  <td><code>response</code> <span class="badge">Required</span></td>
-                  <td><code>str</code></td>
-                  <td>The message the AI agent replied with.</td>
-                </tr>
-                <tr>
-                  <td><code>run_in_background</code> <span class="badge optional">Optional</span></td>
-                  <td><code>bool</code></td>
-                  <td>If <code>True</code>, pushes the job to a queue (like Redis) and immediately returns a Job ID. If <code>False</code> (default), processes synchronously and returns a <code>MemoryAnalysis</code> object.</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <br/>
-            <h3>2. <code>hydrate_context()</code></h3>
-            <p>Searches the database for memories relevant to the upcoming prompt, and formats them into a perfectly constructed "System Prompt" string that you can inject into your LLM.</p>
-            <table class="param-table">
-              <thead>
-                <tr>
-                  <th>Parameter</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>prompt</code> <span class="badge">Required</span></td>
-                  <td><code>str</code></td>
-                  <td>The upcoming query the user is about to ask. GistLattice uses this to find the most semantically relevant past memories.</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <br/>
-            <h3>3. <code>retrieve()</code></h3>
-            <p>Fetches the raw structured memory objects. Use this instead of <code>hydrate_context</code> if you want to write your own custom prompt formatter.</p>
-            <table class="param-table">
-              <thead>
-                <tr>
-                  <th>Parameter</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>query</code> <span class="badge">Required</span></td>
-                  <td><code>str</code></td>
-                  <td>The search string used to find relevant vector embeddings.</td>
-                </tr>
-                <tr>
-                  <td><code>limit</code> <span class="badge optional">Optional</span></td>
-                  <td><code>int</code></td>
-                  <td>The maximum number of memories to return. Defaults to <code>memory_limit</code> setting (which defaults to 3).</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section class="panel" id="async-queue">
-            <h2>Async Queue Processing (Background Workers)</h2>
-            <p>For high-traffic applications, you do not want to block your user's web request waiting for an LLM to analyze a memory. You can queue the task asynchronously so it executes in the background.</p>
-            <div class="code">
-              <pre><code>import asyncio
-from gistlattice import GistLattice
-
-async def main():
-    # Configure with Redis for distributed background tasks
-    memory = GistLattice(
-        provider="openai", 
-        queue_backend="redis", 
-        redis_url="redis://localhost:6379"
-    )
-
-    # By setting run_in_background=True, the system instantly queues the 
-    # memory and returns a Job ID string instead of a MemoryAnalysis object.
-    job_id = await memory.remember(
-        prompt="I feel really overwhelmed with this project.",
-        response="Let's break it down into smaller steps.",
-        run_in_background=True
-    )
-    
-    print(f"Instantly queued job: {job_id}")
-    # The user's web request completes instantly.
-    # A separate worker process consumes the job and saves it to the database!
-
-asyncio.run(main())</code></pre>
-            </div>
-          </section>
-
-          <section class="panel" id="env-vars">
-            <h2>Environment Variables</h2>
-            <p>Instead of passing configuration programmatically into <code>GistLattice(redis_url="...")</code>, you can define them in your environment or a <code>.env</code> file. Environment variables act as the global defaults across your app.</p>
-            
-            <div class="callout">
-              <strong>Precedence Rules</strong>
-              <span>If you explicitly pass a keyword argument to <code>GistLattice(llm_model="gpt-4")</code>, it will override the environment variable completely.</span>
-            </div>
-
-            <table class="env-table">
-              <thead>
-                <tr>
-                  <th>Environment Variable</th>
-                  <th>Description & Default</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>GISTLATTICE_ENV</code></td>
-                  <td>Runtime environment. Default: <code>development</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_LLM_PROVIDER</code></td>
-                  <td>Default LLM (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>).</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_LLM_MODEL</code></td>
-                  <td>Overrides the default chat model.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_EMBEDDING_PROVIDER</code></td>
-                  <td>Separate provider for embeddings. Defaults to LLM_PROVIDER.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_EMBEDDING_MODEL</code></td>
-                  <td>Overrides the default embedding model.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_EPISODIC_BACKEND</code></td>
-                  <td>Vector storage (<code>memory</code> or <code>qdrant</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_SEMANTIC_BACKEND</code></td>
-                  <td>Graph storage (<code>memory</code> or <code>neo4j</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_QUEUE_BACKEND</code></td>
-                  <td>Job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_QDRANT_HOST</code></td>
-                  <td>Default: <code>localhost</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_QDRANT_PORT</code></td>
-                  <td>Default: <code>6333</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_QDRANT_COLLECTION</code></td>
-                  <td>Default: <code>user_episodic_stream</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_QDRANT_VECTOR_SIZE</code></td>
-                  <td>Manually set dimension size.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_NEO4J_URI</code></td>
-                  <td>Default: <code>bolt://localhost:7687</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_NEO4J_USERNAME</code></td>
-                  <td>Default: <code>neo4j</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_NEO4J_PASSWORD</code></td>
-                  <td>Default: <code>password</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_REDIS_URL</code></td>
-                  <td>Default: <code>redis://localhost:6379/0</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_REDIS_QUEUE_NAME</code></td>
-                  <td>Default: <code>memory-consolidation</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_REDIS_PROCESSING_NAME</code></td>
-                  <td>Default: <code>memory-consolidation:processing</code>.</td>
-                </tr>
-                <tr>
-                  <td><code>GISTLATTICE_MEMORY_LIMIT</code></td>
-                  <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section class="panel" id="backends">
-            <h2>Moving to Production Databases</h2>
-            <p>When you are ready to scale, simply install the required extras and update your parameters. The API remains exactly the same.</p>
-            <div class="code">
-              <pre><code>pip install gistlattice[qdrant,neo4j,redis]</code></pre>
-            </div>
-            <p style="margin-top: 14px;">Then configure the client:</p>
-            <div class="code">
-              <pre><code>memory = GistLattice(
-    # Core
-    provider="openai",
-    
-    # Backends
-    episodic_store_backend="qdrant",
-    semantic_store_backend="neo4j",
-    queue_backend="redis",
-    
-    # Auth
-    qdrant_host="localhost",
-    neo4j_uri="bolt://localhost:7687",
-    neo4j_password="secure_password",
-    redis_url="redis://localhost:6379"
-)</code></pre>
-            </div>
-          </section>
+        <div class="nav-group">
+            <div class="nav-group-title">Getting Started</div>
+            <a href="#introduction" class="nav-link active">Introduction</a>
+            <a href="#quick-start" class="nav-link">Quick Start</a>
+            <a href="#how-it-works" class="nav-link">How it Works</a>
         </div>
-      </div>
 
-      <div class="panel footer">
-        GistLattice Documentation &middot; Memory infrastructure for Python agents
-      </div>
+        <div class="nav-group">
+            <div class="nav-group-title">User Guide</div>
+            <a href="#core-api" class="nav-link">Core API</a>
+            <a href="#async-processing" class="nav-link">Async Processing</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-title">Infrastructure</div>
+            <a href="#backends" class="nav-link">Production Backends</a>
+            <a href="#providers" class="nav-link">LLM Providers</a>
+            <a href="#kwargs" class="nav-link">Client Kwargs</a>
+            <a href="#env-vars" class="nav-link">Environment Variables</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="content-container">
+            
+            <!-- Hero / Introduction -->
+            <section id="introduction" class="hero-section">
+                <div class="hero-badge">v0.2.0 Released</div>
+                <h1>Cognitive Memory <br>for <span class="gradient-text">AI Agents</span>.</h1>
+                <p style="font-size: 1.25rem; max-width: 700px; margin-bottom: 2rem;">
+                    A beautiful, unified Python library for giving your LLMs durable, long-term memory. It actively reflects on conversations, extracts emotional valences, maps semantic graphs, and intelligently injects context.
+                </p>
+                <div style="display: flex; gap: 1rem;">
+                    <code style="background: #000; border: 1px solid var(--border-light); padding: 0.75rem 1.25rem; border-radius: var(--border-radius-sm); color: #E2E8F0;">pip install gistlattice</code>
+                </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section id="quick-start" style="margin-top: 2rem;">
+                <h2>Quick Start</h2>
+                <p>GistLattice defaults to fast, in-memory databases and synchronous APIs. You can start prototyping immediately without spinning up infrastructure. Just bring an API key (like <code>OPENAI_API_KEY</code>).</p>
+                
+<pre><code class="language-python"><span class="token keyword">from</span> gistlattice <span class="token keyword">import</span> GistLattice
+
+<span class="token keyword">def</span> <span class="token function">main</span>():
+    <span class="token comment"># 1. Initialize the client</span>
+    memory = GistLattice(provider=<span class="token string">"openai"</span>, tenant_id=<span class="token string">"demo"</span>, user_id=<span class="token string">"user-123"</span>)
+
+    <span class="token comment"># 2. Store an interaction (auto-buffers in memory to save LLM calls)</span>
+    memory.remember(
+        prompt=<span class="token string">"I'm feeling stressed about the product launch tomorrow."</span>,
+        response=<span class="token string">"I understand. Let's review the final checklist to be ready."</span>
+    )
+    <span class="token keyword">print</span>(<span class="token string">"Memory buffered!"</span>)
+
+    <span class="token comment"># 3. Retrieve formatted context to inject into your next LLM prompt</span>
+    context = memory.hydrate_context(<span class="token string">"What should I do next?"</span>)
+    
+    <span class="token keyword">print</span>(context)
+
+<span class="token keyword">if</span> __name__ == <span class="token string">"__main__"</span>:
+    main()</code></pre>
+            </section>
+
+            <!-- How it works -->
+            <section id="how-it-works">
+                <h2>How it Works: A Human Example</h2>
+                <p>Most "Agent Memory" systems simply dump raw chat transcripts into a vector database. GistLattice uses an LLM to actively <strong>reflect</strong> on a conversation, extracting the <strong>Gist</strong>, the <strong>Valence</strong> (emotion), and the <strong>Importance</strong>.</p>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <h4 style="margin-top: 0;">1. The Buffer</h4>
+                        <p>GistLattice intercepts conversations and buffers them in short-term memory (detecting topic shifts dynamically). It prevents making expensive DB/LLM calls on every single message.</p>
+                    </div>
+                    <div class="card">
+                        <h4 style="margin-top: 0;">2. The Reflection</h4>
+                        <p>Once flushed, it uses an LLM to analyze the buffer. Passing comments decay quickly; major life events (Importance > 0.8) are cemented permanently.</p>
+                    </div>
+                </div>
+
+                <h3>The Story of Sarah & Nexus</h3>
+                
+                <div class="chat-container">
+                    <div class="chat-system">Day 1: The Major Life Event</div>
+                    <div class="chat-user">I just got hired at Acme Corp and I'm moving to New York next month! I'm honestly incredibly stressed about finding an apartment.</div>
+                    <div class="chat-agent">Congratulations on Acme Corp! Finding an apartment in New York is tough, but we can break it down step-by-step. Don't stress, I'll help you.</div>
+                    
+                    <div class="chat-system">
+                        <strong>Behind the scenes:</strong> GistLattice extracts:<br>
+                        Gist: "Hired at Acme Corp, moving to NY, needs apartment"<br>
+                        Importance: 0.9 (Major event)<br>
+                        Valence: -0.7 (Stressed/Anxious)<br>
+                        Semantic Updates: LOCATED_AT "New York"
+                    </div>
+                    
+                    <div class="chat-system" style="margin-top: 1rem;">Six Months Later... The Short-Term Buffer is wiped.</div>
+                    <div class="chat-user">I'm exhausted from work today. Any ideas for what I should do for dinner?</div>
+                    
+                    <div class="chat-system">
+                        <strong>hydrate_context()</strong> injects:<br>
+                        [SYSTEM CONTEXT: The user is Sarah. Her current location is New York. She is employed at Acme Corp. Past memory: She was very stressed about moving here 6 months ago.]
+                    </div>
+                    
+                    <div class="chat-agent">Rough day at Acme Corp? Since you're in New York, you should treat yourself. There's a fantastic Italian place two blocks from your office. You survived the stressful move, you deserve a break!</div>
+                </div>
+                <p><strong>Sarah is blown away.</strong> She hasn't mentioned Acme Corp or New York in six months, but her AI remembered her exact life situation.</p>
+            </section>
+
+            <!-- Core API -->
+            <section id="core-api">
+                <h2>The Core API</h2>
+                <p>The entire surface area of the library is encapsulated in three methods.</p>
+
+                <h3>1. <code>remember()</code> and <code>aremember()</code></h3>
+                <p>Takes a user prompt and an agent response, buffers them, and saves the structured memory to the database once a conversational limit or topic-shift is reached.</p>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>prompt</code> <span class="badge required">Required</span></td>
+                                <td><code>str</code></td>
+                                <td>The message the user sent.</td>
+                            </tr>
+                            <tr>
+                                <td><code>response</code> <span class="badge required">Required</span></td>
+                                <td><code>str</code></td>
+                                <td>The message the AI agent replied with.</td>
+                            </tr>
+                            <tr>
+                                <td><code>run_in_background</code> <span class="badge optional">Optional</span></td>
+                                <td><code>bool</code></td>
+                                <td>If <code>True</code>, pushes the job to the Queue broker immediately.</td>
+                            </tr>
+                            <tr>
+                                <td><code>bypass_buffer</code> <span class="badge optional">Optional</span></td>
+                                <td><code>bool</code></td>
+                                <td>If <code>True</code>, skips the MemoryBufferController and forces an immediate LLM analysis.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>2. <code>hydrate_context()</code> and <code>ahydrate_context()</code></h3>
+                <p>Searches the unified storage backend for memories relevant to the upcoming prompt, and formats them into a perfectly constructed "System Prompt" block.</p>
+                
+<pre><code class="language-python">upcoming_query = <span class="token string">"What should I focus on today?"</span>
+system_prompt_addition = memory.hydrate_context(upcoming_query)
+
+final_prompt = <span class="token string">f"{system_prompt_addition}\n\nUser: {upcoming_query}"</span></code></pre>
+
+                <h3>3. <code>retrieve()</code> and <code>aretrieve()</code></h3>
+                <p>Fetches the raw structured memory objects if you prefer to build your own custom system prompt.</p>
+            </section>
+
+            <!-- Async Processing -->
+            <section id="async-processing">
+                <h2>Async Processing & Queues</h2>
+                <p>For high-traffic applications (like FastAPI), you do not want to block your user's web request waiting for an LLM to analyze a memory. You can queue the task asynchronously.</p>
+                
+                <div class="callout info">
+                    <div class="callout-icon">⚡</div>
+                    <div class="callout-content">
+                        <p><strong>High Performance Setup</strong></p>
+                        <p>Set <code>queue_backend="redis"</code> and use <code>aremember(run_in_background=True)</code> to instantly drop the workload onto a Redis queue. A separate worker process consumes it!</p>
+                    </div>
+                </div>
+                
+                <div class="callout info">
+                    <div class="callout-icon">🌐</div>
+                    <div class="callout-content">
+                        <p><strong>Distributed Short-Term Buffer</strong></p>
+                        <p>When you enable Redis, GistLattice automatically upgrades your short-term conversational buffer from local Python memory to a distributed Redis store. This allows you to scale multiple web-workers horizontally while perfectly maintaining conversation continuity!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Production Backends -->
+            <section id="backends">
+                <h2>Production Backends</h2>
+                <p>When you are ready to persist your AI's memories durably, connect GistLattice to scalable storage backends by installing the extras:</p>
+                
+                <pre><code class="language-bash">pip install gistlattice[postgres,neo4j,redis]</code></pre>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h4 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M4 4v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.342a2 2 0 0 0-.602-1.43l-4.44-4.342A2 2 0 0 0 14.53 2H6a2 2 0 0 0-2 2z"></path><path d="M9 13h6"></path><path d="M9 17h3"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>
+                            PostgreSQL (pgvector)
+                        </h4>
+                        <p>GistLattice unifies episodic vectors and semantic graphs into relational bridge tables in Postgres via <code>asyncpg</code> and <code>pgvector</code> (HNSW).</p>
+                        <code>storage_backend="postgres"</code>
+                    </div>
+                    <div class="card">
+                        <h4 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-secondary)" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            Neo4j
+                        </h4>
+                        <p>Maintains a literal living knowledge graph of concepts while utilizing native vector indices for similarity retrieval.</p>
+                        <code>storage_backend="neo4j"</code>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Providers -->
+            <section id="providers">
+                <h2>Supported LLM Providers</h2>
+                <p>GistLattice ships with built-in support for the four major LLM providers. Switching is as simple as changing the <code>provider="gemini"</code> string.</p>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Provider</th>
+                                <th>Extras Install</th>
+                                <th>API Key Env Var</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>OpenAI</strong></td>
+                                <td><code>[openai]</code></td>
+                                <td><code>OPENAI_API_KEY</code></td>
+                                <td>Default provider. Supports chat & embeddings.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gemini</strong></td>
+                                <td><code>[gemini]</code></td>
+                                <td><code>GEMINI_API_KEY</code></td>
+                                <td>Highly recommended for cost-effective analysis.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Anthropic</strong></td>
+                                <td><code>[anthropic,openai]</code></td>
+                                <td><code>ANTHROPIC_API_KEY</code></td>
+                                <td>Requires a separate <code>embedding_provider</code> (e.g. openai) as Anthropic lacks a public embedding API.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ollama</strong></td>
+                                <td><code>[ollama]</code></td>
+                                <td>None (Local)</td>
+                                <td>Requires local daemon running. Specify <code>llm_model</code> and <code>embedding_model</code> explicitly.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Client Initialization Kwargs -->
+            <section id="kwargs">
+                <h2>Client Initialization (Kwargs)</h2>
+                <p>The <code>GistLattice</code> class accepts extensive keyword arguments to configure underlying behavior, overriding any set environment variables.</p>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Description & Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>provider</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>LLM provider (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>). Default: <code>openai</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>tenant_id</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Organization ID for multi-tenant isolation. Default: <code>default</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>user_id</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>User ID for multi-tenant isolation. Default: <code>default</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>app_name</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>GistLattice</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>environment</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>development</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>llm_model</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Overrides the default chat model.</td>
+                            </tr>
+                            <tr>
+                                <td><code>embedding_provider</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Separate provider for embeddings. Defaults to <code>provider</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>embedding_model</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Overrides the default embedding model.</td>
+                            </tr>
+                            <tr>
+                                <td><code>llm_factory_path</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Path to a custom LLM factory Python object.</td>
+                            </tr>
+                            <tr>
+                                <td><code>storage_backend</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Unified storage (<code>memory</code>, <code>postgres</code>, <code>neo4j</code>). Default: <code>memory</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>queue_backend</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>postgres_url</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>postgresql://user:password@localhost:5432/gistlattice</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>neo4j_uri</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>bolt://localhost:7687</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>neo4j_username</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>neo4j</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>neo4j_password</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>password</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>redis_url</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>redis://localhost:6379/0</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>redis_queue_name</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>memory-consolidation</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>redis_processing_name</code> <span class="badge optional">Optional</span></td>
+                                <td><code>str</code></td>
+                                <td>Default: <code>memory-consolidation:processing</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>memory_limit</code> <span class="badge optional">Optional</span></td>
+                                <td><code>int</code></td>
+                                <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Environment Variables -->
+            <section id="env-vars">
+                <h2>Environment Variables</h2>
+                <p>Define your settings globally in a <code>.env</code> file. The client automatically absorbs them.</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Environment Variable</th>
+                                <th>Description / Default</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>GISTLATTICE_APP_NAME</code></td>
+                                <td>Default: <code>GistLattice</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_ENV</code></td>
+                                <td>Default: <code>development</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_LLM_PROVIDER</code></td>
+                                <td>Default LLM (<code>openai</code>, <code>gemini</code>, <code>anthropic</code>, <code>ollama</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_LLM_MODEL</code></td>
+                                <td>Overrides the default chat model.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_EMBEDDING_PROVIDER</code></td>
+                                <td>Separate provider for embeddings. Defaults to <code>LLM_PROVIDER</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_EMBEDDING_MODEL</code></td>
+                                <td>Overrides the default embedding model.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_LLM_FACTORY_PATH</code></td>
+                                <td>Path to a custom LLM factory Python object.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_STORAGE_BACKEND</code></td>
+                                <td>Unified storage (<code>memory</code>, <code>postgres</code>, <code>neo4j</code>). Default: <code>memory</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_QUEUE_BACKEND</code></td>
+                                <td>Job queue (<code>memory</code> or <code>redis</code>). Default: <code>memory</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_POSTGRES_URL</code></td>
+                                <td><code>postgresql://user:password@localhost:5432/gistlattice</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_NEO4J_URI</code></td>
+                                <td><code>bolt://localhost:7687</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_NEO4J_USERNAME</code></td>
+                                <td><code>neo4j</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_NEO4J_PASSWORD</code></td>
+                                <td><code>password</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_REDIS_URL</code></td>
+                                <td><code>redis://localhost:6379/0</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_REDIS_QUEUE_NAME</code></td>
+                                <td><code>memory-consolidation</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_REDIS_PROCESSING_NAME</code></td>
+                                <td><code>memory-consolidation:processing</code></td>
+                            </tr>
+                            <tr>
+                                <td><code>GISTLATTICE_MEMORY_LIMIT</code></td>
+                                <td>Number of memories retrieved per query. Default: <code>3</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-light); text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                <p>GistLattice Documentation &copy; 2026. Memory infrastructure for Python agents.</p>
+            </footer>
+
+        </div>
     </main>
-  </body>
+
+    <script>
+        // Simple script to highlight active nav link on scroll
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.clientHeight;
+                    if (scrollY >= (sectionTop - 150)) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
 </html>

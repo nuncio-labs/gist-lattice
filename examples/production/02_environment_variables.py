@@ -9,8 +9,8 @@ async def main():
     os.environ["GISTLATTICE_LLM_PROVIDER"] = "anthropic"
     os.environ["GISTLATTICE_EMBEDDING_PROVIDER"] = "openai"
     os.environ["GISTLATTICE_QUEUE_BACKEND"] = "redis"
-    os.environ["GISTLATTICE_EPISODIC_BACKEND"] = "qdrant"
-    os.environ["GISTLATTICE_SEMANTIC_BACKEND"] = "neo4j"
+    os.environ["GISTLATTICE_STORAGE_BACKEND"] = "postgres"
+    os.environ["GISTLATTICE_POSTGRES_URL"] = "postgresql://user:password@localhost:5432/gistlattice"
     os.environ["GISTLATTICE_REDIS_URL"] = "redis://localhost:6379/1"
     os.environ["GISTLATTICE_MEMORY_LIMIT"] = "10"
     

@@ -3,7 +3,7 @@ from gistlattice import GistLattice
 
 async def main():
     # Example 3: Production Backends configured programmatically
-    # We explicitly pass our Redis, Neo4j, and Qdrant config via kwargs.
+    # We explicitly pass our Redis and Postgres configs via kwargs.
     
     memory = GistLattice(
         provider="openai",
@@ -12,19 +12,14 @@ async def main():
         
         # Enable the production backends
         queue_backend="redis",
-        semantic_store_backend="neo4j",
-        episodic_store_backend="qdrant",
+        storage_backend="postgres",
         
         # Provide connection strings
         redis_url="redis://localhost:6379/0",
-        neo4j_uri="bolt://localhost:7687",
-        neo4j_username="neo4j",
-        neo4j_password="password",
-        qdrant_host="localhost",
-        qdrant_port=6333,
+        postgres_url="postgresql://user:password@localhost:5432/gistlattice",
     )
 
-    print("Configured GistLattice with Redis, Neo4j, and Qdrant!")
+    print("Configured GistLattice with Redis and Postgres!")
     print("Attempting to remember (requires actual running databases)...")
     
     try:

@@ -16,7 +16,7 @@ async def main():
     # By setting run_in_background=True, the system instantly queues the 
     # interaction and returns a job ID. The actual LLM analysis runs in 
     # the background without blocking this thread.
-    job_id = await memory.remember(
+    job_id = await memory.aremember(
         prompt="I'm feeling a bit anxious about the upcoming product launch.",
         response="It's completely normal to feel anxious. Let's review the checklist.",
         run_in_background=True
@@ -30,7 +30,7 @@ async def main():
     await asyncio.sleep(2)
     
     print("\n2. Hydrating Context for next prompt...")
-    context = await memory.hydrate_context("How am I feeling about work?")
+    context = await memory.ahydrate_context("How am I feeling about work?")
     print(context)
 
 if __name__ == "__main__":

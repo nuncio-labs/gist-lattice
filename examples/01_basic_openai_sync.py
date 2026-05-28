@@ -15,7 +15,7 @@ async def main():
     print("1. Saving memory synchronously...")
     # Because run_in_background=False (which is the default), this will 
     # block and wait for the LLM to analyze and save the memory.
-    analysis = await memory.remember(
+    analysis = await memory.aremember(
         prompt="I really need to focus on my Python project this weekend.",
         response="Got it, I'll remind you to work on your Python project."
     )
@@ -26,7 +26,7 @@ async def main():
     print(f"- Importance: {analysis.importance}")
 
     print("\n2. Hydrating Context for next prompt...")
-    context = await memory.hydrate_context("What was I planning to do?")
+    context = await memory.ahydrate_context("What was I planning to do?")
     print(context)
 
 if __name__ == "__main__":

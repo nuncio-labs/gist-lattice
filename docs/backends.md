@@ -2,34 +2,37 @@
 
 By default, GistLattice runs completely in-memory. This is fantastic for prototyping and unit tests, but data is lost the moment your Python process shuts down.
 
-When you are ready to persist your AI's memories, you can connect GistLattice to three powerful, scalable backends.
+When you are ready to persist your AI's memories, you can connect GistLattice to powerful, scalable storage backends.
 
 ## 1. Install Dependencies
 
 You must install the driver packages for the backends you intend to use:
 ```bash
-pip install gistlattice[qdrant,neo4j,redis]
+pip install gistlattice[postgres,neo4j,redis]
 ```
 
-## 2. The Three Infrastructure Layers
+## 2. Storage Providers
 
-GistLattice divides memory into three distinct architectural layers:
+GistLattice unifies both vector-based episodic memories and graph-based semantic entity relationships into a single `StorageProvider` interface.
 
-### A. Episodic Store (Qdrant)
-Handles rapid vector-based retrieval of specific conversation chunks. 
-- **Activate:** `episodic_store_backend="qdrant"`
+### A. PostgreSQL (pgvector)
+Uses `asyncpg` to store memories in relational bridge tables and performs native HNSW vector similarity search.
+- **Activate:** `storage_backend="postgres"`
 
-### B. Semantic Store (Neo4j)
-Maintains a living knowledge graph of concepts, states, and relationships (e.g., extracting that the user is located in "Paris" or currently focused on "Project X").
-- **Activate:** `semantic_store_backend="neo4j"`
+### B. Neo4j
+Maintains a living knowledge graph of concepts and relationships (e.g. `LOCATED_AT`), while utilizing Neo4j's native vector indices for memory retrieval.
+- **Activate:** `storage_backend="neo4j"`
 
-### C. Queue Broker (Redis)
+## 3. Queue Broker & Buffer (Redis)
 Allows for asynchronous, non-blocking execution of memory reflection. Prevents your user-facing web requests from hanging while waiting for the LLM to analyze the conversation.
+
+**Bonus Feature:** When Redis is activated, GistLattice automatically upgrades your short-term conversational Memory Buffer from local Python memory to a distributed Redis store. This allows you to scale multiple load-balanced web workers without losing context!
+
 - **Activate:** `queue_backend="redis"`
 
 ---
 
-## 3. Configuration Approaches
+## 4. Configuration Approaches
 
 You can configure these backends in two ways: programmatically in Python, or globally via Environment Variables.
 
@@ -43,14 +46,11 @@ memory = GistLattice(
     provider="openai",
     
     # 1. Enable Backends
-    episodic_store_backend="qdrant",
-    semantic_store_backend="neo4j",
+    storage_backend="postgres",
     queue_backend="redis",
     
     # 2. Provide Credentials
-    qdrant_host="localhost",
-    neo4j_uri="bolt://localhost:7687",
-    neo4j_password="my_secure_password",
+    postgres_url="postgresql://user:password@localhost:5432/gistlattice",
     redis_url="redis://localhost:6379/0"
 )
 ```
@@ -62,13 +62,10 @@ Define everything in a `.env` file or your OS environment. The `GistLattice` cli
 # .env file
 GISTLATTICE_LLM_PROVIDER=openai
 
-GISTLATTICE_EPISODIC_BACKEND=qdrant
-GISTLATTICE_SEMANTIC_BACKEND=neo4j
+GISTLATTICE_STORAGE_BACKEND=postgres
 GISTLATTICE_QUEUE_BACKEND=redis
 
-GISTLATTICE_QDRANT_HOST=localhost
-GISTLATTICE_NEO4J_URI=bolt://localhost:7687
-GISTLATTICE_NEO4J_PASSWORD=my_secure_password
+GISTLATTICE_POSTGRES_URL=postgresql://user:password@localhost:5432/gistlattice
 GISTLATTICE_REDIS_URL=redis://localhost:6379/0
 ```
 

@@ -36,27 +36,33 @@ memory = GistLattice(
 
 GistLattice exposes exactly three methods for interacting with memory.
 
-### A. Saving a Memory: `remember()`
+### A. Saving a Memory: `remember()` and `aremember()`
 
-Takes a user prompt and an agent response, reflects on them, and saves the structured memory to the database.
+Takes a user prompt and an agent response, buffers them, and saves the structured memory to the database once a conversational limit is reached.
 
 **Synchronous execution (Default):**
 ```python
-analysis = await memory.remember(
+# Automatically buffers in-memory.
+# Once 15 messages are reached, it merges them and dispatches to the background!
+memory.remember(
     prompt="I am really stressed about the product launch tomorrow.",
     response="I understand. Let's review the final checklist."
 )
-print(analysis.valence) # Output: -0.8 (Highly stressed)
 ```
 
-**Asynchronous execution (High Traffic):**
-If you have a high-traffic app, you don't want to wait for the LLM to analyze the memory. Set `run_in_background=True` and configure a Redis queue backend. It instantly returns a Job ID and processes the memory in the background!
+**Asynchronous execution (High Performance):**
+If you are running inside a native `async` loop like FastAPI or Starlette, you can use `aremember()` to bypass any background thread overhead.
 ```python
-job_id = await memory.remember(
+await memory.aremember(
     prompt="...",
-    response="...",
-    run_in_background=True
+    response="..."
 )
+```
+
+**Legacy Immediate Consolidation:**
+If you want to bypass the buffer and immediately analyze/save the memory:
+```python
+analysis = memory.remember("...", "...", bypass_buffer=True)
 ```
 
 ### B. Injecting Context: `hydrate_context()`
@@ -68,7 +74,7 @@ upcoming_query = "What should I focus on today?"
 
 # Automatically searches for memories related to the upcoming query
 # and formats them into a perfect System Prompt block.
-system_prompt_addition = await memory.hydrate_context(upcoming_query)
+system_prompt_addition = memory.hydrate_context(upcoming_query)
 
 # Inject this into your LLM call!
 final_prompt = f"{system_prompt_addition}\n\nUser: {upcoming_query}"
@@ -79,7 +85,7 @@ final_prompt = f"{system_prompt_addition}\n\nUser: {upcoming_query}"
 If you want to build your own custom system prompt instead of using `hydrate_context()`, use `retrieve()` to fetch the raw data objects.
 
 ```python
-results = await memory.retrieve(query="Product launch", limit=5)
+results = memory.retrieve(query="Product launch", limit=5)
 
 for doc in results.documents:
     print(f"Gist: {doc.metadata['gist']}")
@@ -90,4 +96,4 @@ for doc in results.documents:
 ## 3. Next Steps
 
 - Want to use Gemini, Anthropic, or Ollama instead of OpenAI? Check out the **[Providers Guide](providers.md)**.
-- Ready to move off in-memory storage and connect to Redis, Neo4j, or Qdrant? Check out the **[Production Backends Guide](backends.md)**.
+- Ready to move off in-memory storage and connect to Redis, Neo4j, or PostgreSQL? Check out the **[Production Backends Guide](backends.md)**.

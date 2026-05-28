@@ -1,20 +1,20 @@
 import unittest
 
-from gistlattice.backends import InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore, GistLatticeContainer
+from gistlattice.backends import InMemoryQueueBroker, GistLatticeContainer
 from gistlattice.config import Settings
 from gistlattice.service import GistLatticeService
 from gistlattice.worker import ConsolidationWorker
+from gistlattice.storage.memory import InMemoryStorageProvider
 from tests.llm_factories import build_fake_provider_llm
 
 
 class InteractionFlowTests(unittest.IsolatedAsyncioTestCase):
     async def test_queue_and_worker_consolidates(self) -> None:
-        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm, storage_backend="memory")
         container = GistLatticeContainer(
             settings=settings,
             llm=build_fake_provider_llm(settings),
-            episodic_store=InMemoryEpisodicStore(),
-            semantic_store=InMemorySemanticStore(),
+            storage=InMemoryStorageProvider(),
             queue=InMemoryQueueBroker(),
         )
         service = GistLatticeService(container)
@@ -33,22 +33,23 @@ class InteractionFlowTests(unittest.IsolatedAsyncioTestCase):
 
         processed = await worker.process_once()
         self.assertTrue(processed)
-        context = await container.semantic_store.get_active_user_context(
-            tenant_id="tenant-a",
-            user_id="user-a",
-        )
+        
+        chunks = container.storage._chunks.get(("tenant-a", "user-a"), [])
+        self.assertEqual(len(chunks), 1)
+        
+        chunk = chunks[0]
+        context = chunk.get("relationships", {})
 
         self.assertIn("CURRENT_STATE", context)
         self.assertIn("ACTIVE_FOCUS", context)
         self.assertIn("LOCATED_AT", context)
 
     async def test_worker_acknowledges_jobs_without_losing_them(self) -> None:
-        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm, storage_backend="memory")
         container = GistLatticeContainer(
             settings=settings,
             llm=build_fake_provider_llm(settings),
-            episodic_store=InMemoryEpisodicStore(),
-            semantic_store=InMemorySemanticStore(),
+            storage=InMemoryStorageProvider(),
             queue=InMemoryQueueBroker(),
         )
         service = GistLatticeService(container)

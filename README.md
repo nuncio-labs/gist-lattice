@@ -31,7 +31,7 @@ pip install gistlattice
 
 Install production backends (optional):
 ```bash
-pip install gistlattice[qdrant,neo4j,redis]
+pip install gistlattice[postgres,neo4j,redis]
 ```
 
 Install specific LLM providers:
@@ -47,28 +47,31 @@ pip install gistlattice[ollama]
 The entire surface area of the library is encapsulated in a single, elegant class: `GistLattice`.
 
 ```python
-import asyncio
 from gistlattice import GistLattice
 
-async def main() -> None:
+def main() -> None:
     # 1. Initialize the client (defaults to in-memory storage)
     memory = GistLattice(provider="openai", tenant_id="tenant-a", user_id="user-123")
 
     # 2. Store an interaction synchronously
-    analysis = await memory.remember(
+    # This automatically buffers the interaction to eliminate per-turn LLM database mutations.
+    memory.remember(
         prompt="I'm feeling really stressed about the product launch tomorrow.",
         response="I understand. Let's review the final checklist to make sure we are ready."
     )
-    print(f"Saved Memory Gist: {analysis.gist}")
-    print(f"Emotional Valence: {analysis.valence}") # e.g., -0.8 (Highly stressed)
+    print("Memory buffered!")
 
     # 3. Retrieve formatted context to inject into your next LLM prompt
-    context = await memory.hydrate_context("What should I do next?")
+    context = memory.hydrate_context("What should I do next?")
     print("\n--- Hydrated Context ---")
     print(context)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
 ```
+
+> [!TIP]
+> **For Best Performance:** `GistLattice` fully supports native `async/await`! If you are building a high-throughput API (like FastAPI), use `memory.aremember()`, `memory.aretrieve()`, and `memory.ahydrate_context()` to bypass background thread overhead.
 
 ## 📐 Architecture Flow
 
@@ -79,22 +82,22 @@ graph LR
     App[Your AI App] --> Remember(memory.remember)
     App --> Hydrate(memory.hydrate_context)
     
-    Remember --> LLM[LLM Reflection Analysis]
+    Remember --> Buffer[MemoryBufferController]
+    Buffer --> LLM[LLM Reflection Analysis]
     
-    LLM --> Episodic[(Episodic: Qdrant)]
-    LLM --> Semantic[(Semantic: Neo4j)]
+    LLM --> Storage[(StorageProvider: Postgres / Neo4j)]
     
-    Hydrate --> Episodic
-    Hydrate --> Semantic
+    Hydrate --> Storage
 ```
 
 ## 📚 Documentation
 
 We have completely stripped out the architectural jargon. Our documentation is heavily focused on getting you building instantly:
 
-1. **[User Guide & API Reference](./docs/user-guide.md)**: Everything you need to know about `remember()`, `hydrate_context()`, and `retrieve()`.
-2. **[Supported Providers](./docs/providers.md)**: How to switch between OpenAI, Gemini, Anthropic, and Ollama.
-3. **[Production Backends](./docs/backends.md)**: How to connect to Redis, Neo4j, and Qdrant for durable, at-scale memory.
+1. **[How it Works (A Human Example)](./docs/how-it-works.md)**: A plain-English story demonstrating the difference between short-term buffers and GistLattice.
+2. **[User Guide & API Reference](./docs/user-guide.md)**: Everything you need to know about `remember()`, `hydrate_context()`, and `retrieve()`.
+3. **[Supported Providers](./docs/providers.md)**: How to switch between OpenAI, Gemini, Anthropic, and Ollama.
+4. **[Production Backends](./docs/backends.md)**: How to connect to Redis, PostgreSQL, and Neo4j for durable, at-scale memory.
 
 ## 🛠 Examples
 
@@ -109,7 +112,7 @@ Want to see runnable code? Check out the `examples/` directory:
 We would love your help making GistLattice the standard for agent memory! To contribute:
 
 1. Fork the repository.
-2. Install dependencies: `pip install -e ".[dev,openai,qdrant,neo4j,redis]"`
+2. Install dependencies: `pip install -e ".[dev,openai,postgres,neo4j,redis]"`
 3. Run the test suite:
    ```bash
    python3 -m unittest discover -s tests -v

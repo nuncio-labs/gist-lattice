@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from .backends import GistLatticeContainer
-from .models import ConsolidationJob, MemoryAnalysis, MemoryDocument, MemoryGist, MemoryRetrievalResult
+from .models import ConsolidationJob, MemoryAnalysis, MemoryDocument, MemoryGist, MemoryRetrievalResult, ExtractedMemory
 
 logger = logging.getLogger(__name__)
 
@@ -35,21 +35,15 @@ class GistLatticeService:
     ) -> MemoryRetrievalResult:
         query_embedding = await self.container.llm.embed_text(query)
         memory_limit = self.container.settings.memory_limit if limit is None else limit
-        retained_gists = await self.container.episodic_store.recall_relevant_gists(
+        retained_gists = await self.container.storage.vector_search(
             tenant_id=tenant_id,
             user_id=user_id,
-            query_embedding=query_embedding,
+            query_vector=query_embedding,
             limit=memory_limit,
         )
-        active_context = await self.container.semantic_store.get_active_user_context(
-            tenant_id=tenant_id,
-            user_id=user_id,
-        )
 
-        context_lines = [f"{key.upper()}: {value}" for key, value in sorted(active_context.items())]
         hydrated_context = "\n".join(
             [
-                "Active Context: " + (", ".join(context_lines) if context_lines else "none"),
                 "Retained Memory Timeline Elements:",
                 *(
                     [
@@ -178,42 +172,28 @@ class GistLatticeService:
 
     async def finalize_consolidation(self, job: ConsolidationJob, analysis: MemoryAnalysis) -> MemoryAnalysis:
         embedding = await self.container.llm.embed_text(f"{job.prompt}\n{job.response}")
-        await self.container.episodic_store.register_episode(
+        
+        relationships = {}
+        if analysis.structural_location:
+            relationships["LOCATED_AT"] = analysis.structural_location
+        if analysis.core_project:
+            relationships["ACTIVE_FOCUS"] = analysis.core_project
+            
+        mood_state = "Regulated/Balanced" if analysis.valence > -0.2 else "Elevated Panic State"
+        relationships["CURRENT_STATE"] = mood_state
+        
+        extracted_memory = ExtractedMemory(
             tenant_id=job.tenant_id,
             user_id=job.user_id,
             interaction_id=job.interaction_id,
-            embedding=embedding,
-            text=f"User: {job.prompt}\nAI: {job.response}",
             gist=analysis.gist,
             valence=analysis.valence,
             importance=analysis.importance,
+            embedding=embedding,
+            relationships=relationships
         )
-
-        if analysis.structural_location:
-            await self.container.semantic_store.mutate_state_edge(
-                tenant_id=job.tenant_id,
-                user_id=job.user_id,
-                relationship_type="LOCATED_AT",
-                new_value=analysis.structural_location,
-                entity_type="Geographical_Node",
-            )
-        if analysis.core_project:
-            await self.container.semantic_store.mutate_state_edge(
-                tenant_id=job.tenant_id,
-                user_id=job.user_id,
-                relationship_type="ACTIVE_FOCUS",
-                new_value=analysis.core_project,
-                entity_type="Task_Node",
-            )
-
-        mood_state = "Regulated/Balanced" if analysis.valence > -0.2 else "Elevated Panic State"
-        await self.container.semantic_store.mutate_state_edge(
-            tenant_id=job.tenant_id,
-            user_id=job.user_id,
-            relationship_type="CURRENT_STATE",
-            new_value=mood_state,
-            entity_type="Psychological_Node",
-        )
+        
+        await self.container.storage.write_memory(extracted_memory)
 
         logger.info(
             "interaction_consolidated",

@@ -1,45 +1,39 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from gistlattice.backends import InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore
+from gistlattice.backends import InMemoryQueueBroker, GistLatticeContainer
+from gistlattice.storage.memory import InMemoryStorageProvider
 from gistlattice.config import Settings
-from gistlattice.backends import GistLatticeContainer
+from gistlattice.models import ExtractedMemory
 from gistlattice.service import GistLatticeService
 from tests.llm_factories import build_fake_provider_llm
 
 
 class MemoryScoringTests(unittest.IsolatedAsyncioTestCase):
     async def test_prompt_hydration_includes_active_context_and_retained_gist(self) -> None:
-        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
-        episodic = InMemoryEpisodicStore()
-        semantic = InMemorySemanticStore()
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm, storage_backend="memory")
+        storage = InMemoryStorageProvider()
         llm = build_fake_provider_llm(settings)
         container = GistLatticeContainer(
             settings=settings,
             llm=llm,
-            episodic_store=episodic,
-            semantic_store=semantic,
+            storage=storage,
             queue=InMemoryQueueBroker(),
         )
         service = GistLatticeService(container)
 
-        await episodic.register_episode(
+        embedding = await llm.embed_text("Prepare the Paris launch plan")
+        mem = ExtractedMemory(
             tenant_id="tenant-a",
             user_id="user-a",
             interaction_id="seed-1",
-            embedding=await llm.embed_text("Prepare the Paris launch plan"),
-            text="seed",
             gist="Prepare the Paris launch plan",
             valence=0.2,
             importance=0.9,
+            embedding=embedding,
+            relationships={"CURRENT_STATE": "Focused"}
         )
-        await semantic.mutate_state_edge(
-            tenant_id="tenant-a",
-            user_id="user-a",
-            relationship_type="CURRENT_STATE",
-            new_value="Focused",
-            entity_type="Psychological_Node",
-        )
+        await storage.write_memory(mem)
 
         hydrated, retained = await service.build_hydrated_prompt(
             tenant_id="tenant-a",
@@ -48,32 +42,35 @@ class MemoryScoringTests(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertIn("Previous Gist: Prepare the Paris launch plan", hydrated)
-        self.assertIn("CURRENT_STATE: Focused", hydrated)
         self.assertEqual(len(retained), 1)
 
     async def test_old_low_importance_memories_are_filtered_out(self) -> None:
-        store = InMemoryEpisodicStore()
-        settings = Settings(environment="test", llm_factory=build_fake_provider_llm)
+        store = InMemoryStorageProvider()
+        settings = Settings(environment="test", llm_factory=build_fake_provider_llm, storage_backend="memory")
         llm = build_fake_provider_llm(settings)
         embedding = await llm.embed_text("stale memory")
-        await store.register_episode(
+        
+        mem = ExtractedMemory(
             tenant_id="tenant-a",
             user_id="user-a",
             interaction_id="old-1",
-            embedding=embedding,
-            text="old",
             gist="Old memory",
             valence=-0.5,
             importance=0.1,
+            embedding=embedding,
         )
-        record = store._episodes[("tenant-a", "user-a")][0]
+        await store.write_memory(mem)
+        
+        # Mutate the internal timestamp for testing
+        record = store._chunks[("tenant-a", "user-a")][0]
         record["last_accessed"] = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
         record["embedding"] = [0.0] * len(embedding)
         record["importance"] = 0.0
-        retained = await store.recall_relevant_gists(
+        
+        retained = await store.vector_search(
             tenant_id="tenant-a",
             user_id="user-a",
-            query_embedding=embedding,
+            query_vector=embedding,
             limit=3,
         )
         self.assertEqual(retained, [])

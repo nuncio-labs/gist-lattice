@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "gistlattice"
-version = "0.1.0"
+version = "0.2.0"
 description = "GistLattice is a memory-augmented Python library with episodic recall, semantic state, and durable consolidation."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -21,8 +25,8 @@ gemini = [
 ollama = [
     "ollama",
 ]
-qdrant = [
-    "qdrant-client>=1.18.0",
+postgres = [
+    "asyncpg",
 ]
 redis = [
     "redis>=5.0.0",

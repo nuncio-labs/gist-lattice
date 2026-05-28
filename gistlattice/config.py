@@ -17,14 +17,10 @@ class Settings(BaseModel):
 
     llm_factory_path: str | None = None
     llm_factory: Callable[["Settings"], Any] | None = None
-    episodic_store_backend: str = "memory"
-    semantic_store_backend: str = "memory"
+    storage_backend: str = "memory"
     queue_backend: str = "memory"
 
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
-    qdrant_collection: str = "user_episodic_stream"
-    qdrant_vector_size: int | None = None
+    postgres_url: str = "postgresql://user:password@localhost:5432/gistlattice"
 
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_username: str = "neo4j"
@@ -36,7 +32,7 @@ class Settings(BaseModel):
 
     memory_limit: int = 3
 
-    @field_validator("environment", "episodic_store_backend", "semantic_store_backend", "queue_backend")
+    @field_validator("environment", "storage_backend", "queue_backend")
     @classmethod
     def _normalize(cls, value: str) -> str:
         return value.strip().lower()
@@ -55,17 +51,9 @@ class Settings(BaseModel):
             "embedding_provider": env("GISTLATTICE_EMBEDDING_PROVIDER"),
             "embedding_model": env("GISTLATTICE_EMBEDDING_MODEL"),
             "llm_factory_path": env("GISTLATTICE_LLM_FACTORY_PATH"),
-            "episodic_store_backend": env("GISTLATTICE_EPISODIC_BACKEND", cls.model_fields["episodic_store_backend"].default),
-            "semantic_store_backend": env("GISTLATTICE_SEMANTIC_BACKEND", cls.model_fields["semantic_store_backend"].default),
+            "storage_backend": env("GISTLATTICE_STORAGE_BACKEND", cls.model_fields["storage_backend"].default),
             "queue_backend": env("GISTLATTICE_QUEUE_BACKEND", cls.model_fields["queue_backend"].default),
-            "qdrant_host": env("GISTLATTICE_QDRANT_HOST", cls.model_fields["qdrant_host"].default),
-            "qdrant_port": int(env("GISTLATTICE_QDRANT_PORT", cls.model_fields["qdrant_port"].default)),
-            "qdrant_collection": env("GISTLATTICE_QDRANT_COLLECTION", cls.model_fields["qdrant_collection"].default),
-            "qdrant_vector_size": (
-                int(value)
-                if (value := env("GISTLATTICE_QDRANT_VECTOR_SIZE")) is not None
-                else cls.model_fields["qdrant_vector_size"].default
-            ),
+            "postgres_url": env("GISTLATTICE_POSTGRES_URL", cls.model_fields["postgres_url"].default),
             "neo4j_uri": env("GISTLATTICE_NEO4J_URI", cls.model_fields["neo4j_uri"].default),
             "neo4j_username": env("GISTLATTICE_NEO4J_USERNAME", cls.model_fields["neo4j_username"].default),
             "neo4j_password": env("GISTLATTICE_NEO4J_PASSWORD", cls.model_fields["neo4j_password"].default),
@@ -83,14 +71,10 @@ class Settings(BaseModel):
     def validate_runtime(self) -> None:
         if not (self.llm_factory_path or self.llm_factory or self.llm_provider):
             raise ValueError("GISTLATTICE_LLM_FACTORY_PATH, Settings.llm_factory, or Settings.llm_provider is required.")
-        if self.episodic_store_backend not in {"memory", "qdrant"}:
-            raise ValueError("GISTLATTICE_EPISODIC_BACKEND must be 'memory' or 'qdrant'.")
-        if self.semantic_store_backend not in {"memory", "neo4j"}:
-            raise ValueError("GISTLATTICE_SEMANTIC_BACKEND must be 'memory' or 'neo4j'.")
+        if self.storage_backend not in {"memory", "postgres", "neo4j"}:
+            raise ValueError("GISTLATTICE_STORAGE_BACKEND must be 'memory', 'postgres' or 'neo4j'.")
         if self.queue_backend not in {"memory", "redis"}:
             raise ValueError("GISTLATTICE_QUEUE_BACKEND must be 'memory' or 'redis'.")
-        if self.qdrant_vector_size is not None and self.qdrant_vector_size <= 0:
-            raise ValueError("GISTLATTICE_QDRANT_VECTOR_SIZE must be a positive integer.")
         if self.embedding_provider == "anthropic":
             raise ValueError("Anthropic cannot be used as the embedding provider.")
 

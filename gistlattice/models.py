@@ -26,6 +26,18 @@ class MemoryAnalysis(BaseModel):
         return normalized
 
 
+class ExtractedMemory(BaseModel):
+    tenant_id: str
+    user_id: str
+    interaction_id: str
+    gist: str
+    valence: float
+    importance: float
+    embedding: list[float]
+    entities: list[str] = Field(default_factory=list)
+    relationships: dict[str, str] = Field(default_factory=dict)
+
+
 class MemoryGist(BaseModel):
     gist: str
     valence: float

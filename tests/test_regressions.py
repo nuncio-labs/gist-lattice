@@ -1,8 +1,9 @@
 import unittest
 
-from gistlattice.backends import GistLatticeContainer, InMemoryEpisodicStore, InMemoryQueueBroker, InMemorySemanticStore
+from gistlattice.backends import GistLatticeContainer, InMemoryQueueBroker
+from gistlattice.storage.memory import InMemoryStorageProvider
 from gistlattice.config import Settings
-from gistlattice.models import MemoryAnalysis
+from gistlattice.models import MemoryAnalysis, ExtractedMemory
 from gistlattice.service import GistLatticeService
 
 
@@ -21,28 +22,27 @@ class CountingLLM:
 class RegressionTests(unittest.IsolatedAsyncioTestCase):
     async def test_retrieve_honors_zero_limit(self) -> None:
         llm = CountingLLM()
-        settings = Settings(environment="test", llm_factory=lambda _settings: llm)
-        episodic = InMemoryEpisodicStore()
-        semantic = InMemorySemanticStore()
+        settings = Settings(environment="test", llm_factory=lambda _settings: llm, storage_backend="memory")
+        storage = InMemoryStorageProvider()
         container = GistLatticeContainer(
             settings=settings,
             llm=llm,
-            episodic_store=episodic,
-            semantic_store=semantic,
+            storage=storage,
             queue=InMemoryQueueBroker(),
         )
         service = GistLatticeService(container)
 
-        await episodic.register_episode(
+        embedding = await llm.embed_text("seed memory")
+        mem = ExtractedMemory(
             tenant_id="tenant-a",
             user_id="user-a",
             interaction_id="seed-1",
-            embedding=await llm.embed_text("seed memory"),
-            text="seed",
             gist="seed memory",
             valence=0.2,
             importance=0.9,
+            embedding=embedding,
         )
+        await storage.write_memory(mem)
 
         result = await service.retrieve(
             tenant_id="tenant-a",
@@ -56,12 +56,11 @@ class RegressionTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_consolidate_returns_stored_analysis_on_repeat_calls(self) -> None:
         llm = CountingLLM()
-        settings = Settings(environment="test", llm_factory=lambda _settings: llm)
+        settings = Settings(environment="test", llm_factory=lambda _settings: llm, storage_backend="memory")
         container = GistLatticeContainer(
             settings=settings,
             llm=llm,
-            episodic_store=InMemoryEpisodicStore(),
-            semantic_store=InMemorySemanticStore(),
+            storage=InMemoryStorageProvider(),
             queue=InMemoryQueueBroker(),
         )
         service = GistLatticeService(container)
