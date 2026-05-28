@@ -13,6 +13,7 @@ from typing import Any, Protocol
 
 from .config import Settings
 from .models import ConsolidationJob, MemoryAnalysis, MemoryDocument, MemoryGist, MemoryRetrievalResult
+from .providers import build_configured_llm
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,11 @@ def _load_custom_llm(settings: Settings) -> LLMClient:
     factory = settings.llm_factory
     if factory is None:
         if not settings.llm_factory_path:
-            raise ValueError("GISTLATTICE_LLM_FACTORY_PATH must be set for custom LLM backends.")
+            if settings.llm_provider:
+                return build_configured_llm(settings)
+            raise ValueError(
+                "GISTLATTICE_LLM_FACTORY_PATH, Settings.llm_factory, or Settings.llm_provider is required."
+            )
 
         module_path, attr_name = settings.llm_factory_path.rsplit(".", 1)
         module = importlib.import_module(module_path)

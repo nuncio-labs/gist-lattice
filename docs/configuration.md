@@ -8,6 +8,10 @@ GistLattice reads settings from environment variables through `Settings.from_env
 | --- | --- | --- |
 | `GISTLATTICE_APP_NAME` | Human-readable application name | `GistLattice` |
 | `GISTLATTICE_ENV` | Runtime environment name | `development` |
+| `GISTLATTICE_LLM_PROVIDER` | Provider for analysis and response synthesis | required for provider-based setup |
+| `GISTLATTICE_LLM_MODEL` | Model used by the analysis provider | provider default |
+| `GISTLATTICE_EMBEDDING_PROVIDER` | Optional provider for embeddings | defaults to `GISTLATTICE_LLM_PROVIDER` |
+| `GISTLATTICE_EMBEDDING_MODEL` | Model used by the embedding provider | provider default |
 | `GISTLATTICE_LLM_FACTORY_PATH` | Import path for a custom LLM factory | required for env-based setup |
 | `GISTLATTICE_EPISODIC_BACKEND` | Episodic memory backend | `memory` |
 | `GISTLATTICE_SEMANTIC_BACKEND` | Semantic memory backend | `memory` |
@@ -18,6 +22,10 @@ GistLattice reads settings from environment variables through `Settings.from_env
 
 | Field | Purpose |
 | --- | --- |
+| `Settings.llm_provider` | Provider name for the analysis and response model |
+| `Settings.llm_model` | Optional override for the analysis model |
+| `Settings.embedding_provider` | Optional provider name for embeddings |
+| `Settings.embedding_model` | Optional override for the embedding model |
 | `Settings.llm_factory` | Direct Python callable for building a custom LLM client |
 
 ## Provider-Specific Settings
@@ -40,8 +48,9 @@ GistLattice reads settings from environment variables through `Settings.from_env
 The settings layer validates:
 
 - supported backend names
-- LLM factory presence through `GISTLATTICE_LLM_FACTORY_PATH` or `Settings.llm_factory`
+- LLM selection presence through `GISTLATTICE_LLM_FACTORY_PATH`, `Settings.llm_factory`, or `Settings.llm_provider`
 - `GISTLATTICE_QDRANT_VECTOR_SIZE`, when set, is a positive integer
+- `GISTLATTICE_EMBEDDING_PROVIDER` cannot be `anthropic`
 
 ## Recommended Combinations
 
@@ -55,11 +64,14 @@ For ready-made provider helpers, see [Provider Adapters](./providers.md).
 
 ```bash
 export GISTLATTICE_ENV=production
-export GISTLATTICE_LLM_FACTORY_PATH=your_module.build_llm_client
+export GISTLATTICE_LLM_PROVIDER=openai
+export GISTLATTICE_LLM_MODEL=gpt-4.1-mini
+export GISTLATTICE_EMBEDDING_PROVIDER=gemini
+export GISTLATTICE_EMBEDDING_MODEL=gemini-embedding-001
 export GISTLATTICE_EPISODIC_BACKEND=qdrant
 export GISTLATTICE_QDRANT_VECTOR_SIZE=1536
 export GISTLATTICE_SEMANTIC_BACKEND=neo4j
 export GISTLATTICE_QUEUE_BACKEND=redis
 ```
 
-If you are using GistLattice directly in Python, you can also pass a callable factory on `Settings.llm_factory` instead of using `GISTLATTICE_LLM_FACTORY_PATH`.
+If you are using GistLattice directly in Python, you can either pass a callable factory on `Settings.llm_factory` or set the provider/model fields directly on `Settings`.

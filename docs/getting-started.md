@@ -1,6 +1,6 @@
 # Getting Started
 
-GistLattice is a Python library for agent memory management. The default runtime uses in-memory stores, but you must provide an LLM adapter through `Settings.llm_factory` or `Settings.llm_factory_path`.
+GistLattice is a Python library for agent memory management. The default runtime uses in-memory stores, but you must provide either a custom LLM adapter or provider-based settings through `Settings.llm_factory`, `Settings.llm_factory_path`, or `Settings.llm_provider`.
 
 ## Install
 
@@ -16,7 +16,9 @@ pip install gistlattice[neo4j]
 pip install gistlattice[redis]
 ```
 
-For LLM providers, install the matching extra and use one of the ready-made provider factories. See [Backends](./backends.md) for the adapter contract and [Provider Adapters](./providers.md) for the provider-specific helpers.
+For LLM providers, install the matching extra and use one of the ready-made provider factories, or set `Settings.llm_provider` and `Settings.embedding_provider` directly. See [Backends](./backends.md) for the adapter contract and [Provider Adapters](./providers.md) for the provider-specific helpers.
+
+If you want separate providers or models for chat and embeddings, use `Settings.llm_provider`, `Settings.llm_model`, `Settings.embedding_provider`, and `Settings.embedding_model`.
 
 If you use the `qdrant` episodic backend, set `GISTLATTICE_QDRANT_VECTOR_SIZE` when you already know the embedding width for your adapter. Otherwise, GistLattice will create the collection from the first embedding it stores.
 

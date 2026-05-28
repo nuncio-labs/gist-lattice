@@ -11,6 +11,7 @@ This example shows:
 - how to build a custom LLM adapter
 - how to create `Settings`
 - how to build the default service
+- how to configure separate providers and models for LLMs and embeddings
 - how to retrieve memory
 - how to hydrate context
 - how to queue and consolidate an interaction

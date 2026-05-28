@@ -50,6 +50,79 @@ async def _threaded(func: Any, *args: Any, **kwargs: Any) -> Any:
 
 
 @dataclass(slots=True)
+class _CompositeProviderLLM:
+    llm: Any
+    embedder: Any
+
+    async def embed_text(self, text: str) -> list[float]:
+        return await self.embedder.embed_text(text)
+
+    async def analyze_interaction(self, *, prompt: str, response: str) -> MemoryAnalysis:
+        return await self.llm.analyze_interaction(prompt=prompt, response=response)
+
+
+def _resolve_model(
+    settings: Settings | None,
+    *,
+    provider: str,
+    role: str,
+    explicit_model: str | None = None,
+) -> str:
+    if explicit_model:
+        return explicit_model
+    if settings is not None:
+        if role == "llm" and settings.llm_model:
+            return settings.llm_model
+        if role == "embedding" and settings.embedding_model:
+            return settings.embedding_model
+
+    if provider == "openai":
+        return os.getenv(
+            "GISTLATTICE_OPENAI_CHAT_MODEL" if role == "llm" else "GISTLATTICE_OPENAI_EMBEDDING_MODEL",
+            "gpt-4.1-mini" if role == "llm" else "text-embedding-3-small",
+        )
+    if provider == "gemini":
+        return os.getenv(
+            "GISTLATTICE_GEMINI_MODEL" if role == "llm" else "GISTLATTICE_GEMINI_EMBEDDING_MODEL",
+            "gemini-2.5-flash" if role == "llm" else "gemini-embedding-001",
+        )
+    if provider == "ollama":
+        return os.getenv(
+            "GISTLATTICE_OLLAMA_MODEL" if role == "llm" else "GISTLATTICE_OLLAMA_EMBEDDING_MODEL",
+            "gemma3" if role == "llm" else "embeddinggemma",
+        )
+    if provider == "anthropic":
+        if role == "embedding":
+            raise ValueError("Anthropic does not provide embeddings.")
+        return os.getenv("GISTLATTICE_ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
+    raise ValueError(f"Unsupported provider: {provider}")
+
+
+def _build_provider_llm(settings: Settings | None, *, provider: str, model: str) -> Any:
+    if provider == "openai":
+        return build_openai_llm(settings, chat_model=model, embedding_model=model)
+    if provider == "gemini":
+        return build_gemini_llm(settings, analysis_model=model, embedding_model=model)
+    if provider == "ollama":
+        return build_ollama_llm(settings, chat_model=model, embedding_model=model)
+    if provider == "anthropic":
+        return build_anthropic_llm(settings, model=model)
+    raise ValueError(f"Unsupported provider: {provider}")
+
+
+def _build_provider_embeddings(settings: Settings | None, *, provider: str, model: str) -> Any:
+    if provider == "openai":
+        return build_openai_embeddings(settings, model=model)
+    if provider == "gemini":
+        return build_gemini_embeddings(settings, model=model)
+    if provider == "ollama":
+        return build_ollama_embeddings(settings, model=model)
+    if provider == "anthropic":
+        raise ValueError("Anthropic does not provide embeddings.")
+    raise ValueError(f"Unsupported provider: {provider}")
+
+
+@dataclass(slots=True)
 class _OpenAIEmbeddingClient:
     client: Any
     model: str
@@ -158,53 +231,89 @@ class _AnthropicProviderLLM:
         return MemoryAnalysis.model_validate(data)
 
 
-def build_openai_embeddings(_settings: Settings | None = None) -> _OpenAIEmbeddingClient:
+def build_openai_embeddings(
+    settings: Settings | None = None,
+    *,
+    model: str | None = None,
+) -> _OpenAIEmbeddingClient:
     try:
         from openai import OpenAI
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise ImportError("Install the `openai` extra to use OpenAI embeddings.") from exc
 
     client = OpenAI()
-    model = os.getenv("GISTLATTICE_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    return _OpenAIEmbeddingClient(client=client, model=model)
+    embedding_model = _resolve_model(settings, provider="openai", role="embedding", explicit_model=model)
+    return _OpenAIEmbeddingClient(client=client, model=embedding_model)
 
 
-def build_openai_llm(_settings: Settings | None = None) -> _OpenAIProviderLLM:
+def build_openai_llm(
+    settings: Settings | None = None,
+    *,
+    chat_model: str | None = None,
+    embedding_model: str | None = None,
+) -> _OpenAIProviderLLM:
     try:
         from openai import OpenAI
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise ImportError("Install the `openai` extra to use OpenAI adapters.") from exc
 
     client = OpenAI()
-    chat_model = os.getenv("GISTLATTICE_OPENAI_CHAT_MODEL", "gpt-4.1-mini")
-    embedding_model = os.getenv("GISTLATTICE_OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
-    return _OpenAIProviderLLM(client=client, chat_model=chat_model, embedding_model=embedding_model)
+    analysis_model = _resolve_model(settings, provider="openai", role="llm", explicit_model=chat_model)
+    resolved_embedding_model = _resolve_model(
+        settings,
+        provider="openai",
+        role="embedding",
+        explicit_model=embedding_model,
+    )
+    return _OpenAIProviderLLM(client=client, chat_model=analysis_model, embedding_model=resolved_embedding_model)
 
 
-def build_gemini_embeddings(_settings: Settings | None = None) -> _GeminiEmbeddingClient:
+def build_gemini_embeddings(
+    settings: Settings | None = None,
+    *,
+    model: str | None = None,
+) -> _GeminiEmbeddingClient:
     try:
         from google import genai
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise ImportError("Install the `gemini` extra to use Gemini embeddings.") from exc
 
     client = genai.Client()
-    model = os.getenv("GISTLATTICE_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
-    return _GeminiEmbeddingClient(client=client, model=model)
+    embedding_model = _resolve_model(settings, provider="gemini", role="embedding", explicit_model=model)
+    return _GeminiEmbeddingClient(client=client, model=embedding_model)
 
 
-def build_gemini_llm(_settings: Settings | None = None) -> _GeminiProviderLLM:
+def build_gemini_llm(
+    settings: Settings | None = None,
+    *,
+    analysis_model: str | None = None,
+    embedding_model: str | None = None,
+) -> _GeminiProviderLLM:
     try:
         from google import genai
     except ImportError as exc:  # pragma: no cover - depends on optional extra
         raise ImportError("Install the `gemini` extra to use Gemini adapters.") from exc
 
     client = genai.Client()
-    analysis_model = os.getenv("GISTLATTICE_GEMINI_MODEL", "gemini-2.5-flash")
-    embedding_model = os.getenv("GISTLATTICE_GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
-    return _GeminiProviderLLM(client=client, analysis_model=analysis_model, embedding_model=embedding_model)
+    resolved_analysis_model = _resolve_model(settings, provider="gemini", role="llm", explicit_model=analysis_model)
+    resolved_embedding_model = _resolve_model(
+        settings,
+        provider="gemini",
+        role="embedding",
+        explicit_model=embedding_model,
+    )
+    return _GeminiProviderLLM(
+        client=client,
+        analysis_model=resolved_analysis_model,
+        embedding_model=resolved_embedding_model,
+    )
 
 
-def build_ollama_embeddings(_settings: Settings | None = None) -> _OllamaEmbeddingClient:
+def build_ollama_embeddings(
+    settings: Settings | None = None,
+    *,
+    model: str | None = None,
+) -> _OllamaEmbeddingClient:
     try:
         from ollama import Client
     except ImportError as exc:  # pragma: no cover - depends on optional extra
@@ -212,11 +321,16 @@ def build_ollama_embeddings(_settings: Settings | None = None) -> _OllamaEmbeddi
 
     host = os.getenv("GISTLATTICE_OLLAMA_HOST")
     client = Client(host=host) if host else Client()
-    model = os.getenv("GISTLATTICE_OLLAMA_EMBEDDING_MODEL", "embeddinggemma")
-    return _OllamaEmbeddingClient(client=client, model=model)
+    embedding_model = _resolve_model(settings, provider="ollama", role="embedding", explicit_model=model)
+    return _OllamaEmbeddingClient(client=client, model=embedding_model)
 
 
-def build_ollama_llm(_settings: Settings | None = None) -> _OllamaProviderLLM:
+def build_ollama_llm(
+    settings: Settings | None = None,
+    *,
+    chat_model: str | None = None,
+    embedding_model: str | None = None,
+) -> _OllamaProviderLLM:
     try:
         from ollama import Client
     except ImportError as exc:  # pragma: no cover - depends on optional extra
@@ -224,14 +338,20 @@ def build_ollama_llm(_settings: Settings | None = None) -> _OllamaProviderLLM:
 
     host = os.getenv("GISTLATTICE_OLLAMA_HOST")
     client = Client(host=host) if host else Client()
-    chat_model = os.getenv("GISTLATTICE_OLLAMA_MODEL", "gemma3")
-    embedding_model = os.getenv("GISTLATTICE_OLLAMA_EMBEDDING_MODEL", "embeddinggemma")
-    return _OllamaProviderLLM(client=client, chat_model=chat_model, embedding_model=embedding_model)
+    analysis_model = _resolve_model(settings, provider="ollama", role="llm", explicit_model=chat_model)
+    resolved_embedding_model = _resolve_model(
+        settings,
+        provider="ollama",
+        role="embedding",
+        explicit_model=embedding_model,
+    )
+    return _OllamaProviderLLM(client=client, chat_model=analysis_model, embedding_model=resolved_embedding_model)
 
 
 def build_anthropic_llm(
-    _settings: Settings | None = None,
+    settings: Settings | None = None,
     *,
+    model: str | None = None,
     embedding_client: Any | None = None,
     embedding_factory: Any | None = None,
     embedding_factory_path: str | None = None,
@@ -258,12 +378,51 @@ def build_anthropic_llm(
         raise TypeError("Anthropic embedding factory must return an object with `embed_text`.")
 
     client = anthropic.Anthropic()
-    model = os.getenv("GISTLATTICE_ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-    return _AnthropicProviderLLM(client=client, model=model, embedder=embedder)
+    resolved_model = _resolve_model(settings, provider="anthropic", role="llm", explicit_model=model)
+    return _AnthropicProviderLLM(client=client, model=resolved_model, embedder=embedder)
+
+
+def build_configured_llm(settings: Settings) -> Any:
+    if settings.llm_factory or settings.llm_factory_path:
+        raise ValueError("build_configured_llm is for provider-based settings only.")
+    if not settings.llm_provider:
+        raise ValueError("Settings.llm_provider is required when no custom LLM factory is provided.")
+
+    llm_provider = settings.llm_provider.strip().lower()
+    embedding_provider = (settings.embedding_provider or llm_provider).strip().lower()
+
+    analysis_model = _resolve_model(settings, provider=llm_provider, role="llm", explicit_model=settings.llm_model)
+    embedding_model = _resolve_model(
+        settings,
+        provider=embedding_provider,
+        role="embedding",
+        explicit_model=settings.embedding_model,
+    )
+
+    if llm_provider == "anthropic":
+        embedder = _build_provider_embeddings(settings, provider=embedding_provider, model=embedding_model)
+        analysis_llm = build_anthropic_llm(settings, model=analysis_model, embedding_client=embedder)
+        return analysis_llm
+
+    analysis_llm = _build_provider_llm(settings, provider=llm_provider, model=analysis_model)
+    if llm_provider == embedding_provider:
+        if analysis_model == embedding_model:
+            return analysis_llm
+        return _CompositeProviderLLM(
+            llm=analysis_llm,
+            embedder=_build_provider_embeddings(settings, provider=embedding_provider, model=embedding_model),
+        )
+
+    if embedding_provider == "anthropic":
+        raise ValueError("Anthropic cannot be used as the embedding provider.")
+
+    embedder = _build_provider_embeddings(settings, provider=embedding_provider, model=embedding_model)
+    return _CompositeProviderLLM(llm=analysis_llm, embedder=embedder)
 
 
 __all__ = [
     "build_anthropic_llm",
+    "build_configured_llm",
     "build_gemini_embeddings",
     "build_gemini_llm",
     "build_ollama_embeddings",

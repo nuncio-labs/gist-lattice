@@ -8,6 +8,13 @@ GistLattice keeps the runtime modular so you can switch backend providers withou
 | --- | --- | --- |
 | Custom provider adapter | Always required | no extra required |
 
+You can either:
+
+- provide a custom adapter via `Settings.llm_factory` or `Settings.llm_factory_path`
+- set `Settings.llm_provider` and optional separate embedding provider/model fields
+
+The library will build the configured adapter for you when provider-based settings are used.
+
 For ready-made provider helpers, see [Provider Adapters](./providers.md).
 
 ## Custom Provider Adapters
@@ -23,6 +30,13 @@ You can wire it in one of two ways:
 
 - set `Settings.llm_factory_path` for environment-driven setup
 - pass a callable directly to `Settings.llm_factory` in Python code
+
+If you want the library to assemble the provider objects for you, set:
+
+- `Settings.llm_provider`
+- `Settings.llm_model`
+- `Settings.embedding_provider` if it differs from the analysis provider
+- `Settings.embedding_model` if you want a non-default embedding model
 
 Example:
 

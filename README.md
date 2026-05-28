@@ -65,6 +65,11 @@ pip install gistlattice[anthropic]
 
 You always need an LLM adapter. The default backends are in-memory, which makes the library easy to try locally.
 
+You can choose between:
+
+- a custom adapter via `Settings.llm_factory` or `Settings.llm_factory_path`
+- provider-based configuration with `Settings.llm_provider` plus optional separate embedding provider/model settings
+
 ```python
 import asyncio
 
@@ -138,7 +143,9 @@ flowchart LR
 
 Core settings:
 
-- `GISTLATTICE_LLM_FACTORY_PATH` or `Settings.llm_factory` is required
+- `GISTLATTICE_LLM_FACTORY_PATH`, `Settings.llm_factory`, or `Settings.llm_provider` is required
+- `Settings.llm_provider` selects the provider for analysis and response synthesis
+- `Settings.embedding_provider` can be set independently when you want a different provider for embeddings
 - `GISTLATTICE_EPISODIC_BACKEND` defaults to `memory`
 - `GISTLATTICE_SEMANTIC_BACKEND` defaults to `memory`
 - `GISTLATTICE_QUEUE_BACKEND` defaults to `memory`

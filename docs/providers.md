@@ -2,6 +2,8 @@
 
 GistLattice ships ready-made adapter factories for the most common provider SDKs.
 
+If you prefer configuration over wrapper functions, see `Settings.llm_provider` and `Settings.embedding_provider` in [Configuration](./configuration.md). The runtime can assemble those providers for you.
+
 ## Available Factories
 
 | Provider | Factory | Required extra | Notes |
@@ -114,5 +116,6 @@ Environment variables:
 
 - Each factory returns an object implementing the GistLattice LLM contract.
 - You can still wrap these factories in your own function if you need custom defaults.
+- For provider-driven selection, the default runtime can now assemble separate LLM and embedding providers from `Settings`.
 - If you pair any provider with the `qdrant` episodic backend, keep the embedding dimension stable across runs or set `GISTLATTICE_QDRANT_VECTOR_SIZE` explicitly.
 - For full runtime selection details, see [Backends](./backends.md).

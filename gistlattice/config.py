@@ -10,6 +10,11 @@ class Settings(BaseModel):
     app_name: str = "GistLattice"
     environment: str = "development"
 
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    embedding_provider: str | None = None
+    embedding_model: str | None = None
+
     llm_factory_path: str | None = None
     llm_factory: Callable[["Settings"], Any] | None = None
     episodic_store_backend: str = "memory"
@@ -45,6 +50,10 @@ class Settings(BaseModel):
         data = {
             "app_name": env("GISTLATTICE_APP_NAME", cls.model_fields["app_name"].default),
             "environment": env("GISTLATTICE_ENV", cls.model_fields["environment"].default),
+            "llm_provider": env("GISTLATTICE_LLM_PROVIDER"),
+            "llm_model": env("GISTLATTICE_LLM_MODEL"),
+            "embedding_provider": env("GISTLATTICE_EMBEDDING_PROVIDER"),
+            "embedding_model": env("GISTLATTICE_EMBEDDING_MODEL"),
             "llm_factory_path": env("GISTLATTICE_LLM_FACTORY_PATH"),
             "episodic_store_backend": env("GISTLATTICE_EPISODIC_BACKEND", cls.model_fields["episodic_store_backend"].default),
             "semantic_store_backend": env("GISTLATTICE_SEMANTIC_BACKEND", cls.model_fields["semantic_store_backend"].default),
@@ -72,8 +81,8 @@ class Settings(BaseModel):
         self.validate_runtime()
 
     def validate_runtime(self) -> None:
-        if not (self.llm_factory_path or self.llm_factory):
-            raise ValueError("GISTLATTICE_LLM_FACTORY_PATH or Settings.llm_factory is required.")
+        if not (self.llm_factory_path or self.llm_factory or self.llm_provider):
+            raise ValueError("GISTLATTICE_LLM_FACTORY_PATH, Settings.llm_factory, or Settings.llm_provider is required.")
         if self.episodic_store_backend not in {"memory", "qdrant"}:
             raise ValueError("GISTLATTICE_EPISODIC_BACKEND must be 'memory' or 'qdrant'.")
         if self.semantic_store_backend not in {"memory", "neo4j"}:
@@ -82,6 +91,8 @@ class Settings(BaseModel):
             raise ValueError("GISTLATTICE_QUEUE_BACKEND must be 'memory' or 'redis'.")
         if self.qdrant_vector_size is not None and self.qdrant_vector_size <= 0:
             raise ValueError("GISTLATTICE_QDRANT_VECTOR_SIZE must be a positive integer.")
+        if self.embedding_provider == "anthropic":
+            raise ValueError("Anthropic cannot be used as the embedding provider.")
 
     @property
     def is_production(self) -> bool:

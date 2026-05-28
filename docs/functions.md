@@ -7,6 +7,7 @@ This page covers the public symbols you should rely on when using GistLattice as
 - `Settings`
 - `build_default_container(...)`
 - `build_default_service(...)`
+- `build_configured_llm(...)`
 - `GistLatticeContainer`
 - `GistLatticeService`
 
@@ -17,7 +18,9 @@ The configuration model for GistLattice.
 Use it to:
 
 - select the runtime environment
-- provide the required LLM adapter and optionally choose episodic, semantic, and queue backends
+- choose either a custom LLM adapter or built-in provider-based selection
+- set separate providers and models for analysis and embeddings
+- optionally choose episodic, semantic, and queue backends
 - configure provider-specific values
 - provide a direct Python LLM factory when you do not want to use an import path
 
@@ -59,6 +62,12 @@ service = build_default_service(
     )
 )
 ```
+
+## `build_configured_llm(settings)`
+
+Builds an LLM client from provider-based settings.
+
+Use this when you want the runtime to assemble the provider for you instead of passing a custom factory.
 
 ## `GistLatticeContainer`
 
@@ -118,6 +127,7 @@ The `gistlattice.providers` module includes ready-made adapter factories for com
 - `build_gemini_llm(...)`
 - `build_ollama_llm(...)`
 - `build_anthropic_llm(...)`
+- `build_configured_llm(...)`
 
 It also includes embedding-only helpers for cases like Anthropic, where you want a separate embedding provider:
 
