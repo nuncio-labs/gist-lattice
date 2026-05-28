@@ -25,7 +25,8 @@ async def main():
     try:
         analysis = await memory.remember(
             prompt="Let's build a new distributed system.",
-            response="Sounds like a great technical challenge!"
+            response="Sounds like a great technical challenge!",
+            bypass_buffer=True
         )
         print(f"Success! Memory Gist: {analysis.gist}")
     except Exception as e:

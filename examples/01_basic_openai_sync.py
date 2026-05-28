@@ -17,7 +17,8 @@ async def main():
     # block and wait for the LLM to analyze and save the memory.
     analysis = await memory.aremember(
         prompt="I really need to focus on my Python project this weekend.",
-        response="Got it, I'll remind you to work on your Python project."
+        response="Got it, I'll remind you to work on your Python project.",
+        bypass_buffer=True
     )
     
     print("\nMemory Analysis Results:")

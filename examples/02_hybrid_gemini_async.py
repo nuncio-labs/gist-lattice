@@ -19,7 +19,8 @@ async def main():
     job_id = await memory.aremember(
         prompt="I'm feeling a bit anxious about the upcoming product launch.",
         response="It's completely normal to feel anxious. Let's review the checklist.",
-        run_in_background=True
+        run_in_background=True,
+        bypass_buffer=True
     )
     
     print(f"Instantly returned Job ID: {job_id}")
