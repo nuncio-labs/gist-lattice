@@ -48,6 +48,7 @@ class GistLatticeService:
                 *(
                     [
                         f"- Previous Gist: {gist.gist} [Emotional Valence: {gist.valence:.2f}, Importance: {gist.importance:.2f}]"
+                        + (f" (Context: {', '.join([f'{k}: {v}' for k, v in gist.relationships.items()])})" if gist.relationships else "")
                         for gist in retained_gists
                     ]
                     or ["- No Relevant Memories Recalled"]
@@ -63,6 +64,7 @@ class GistLatticeService:
                     "valence": gist.valence,
                     "importance": gist.importance,
                     "score": gist.score,
+                    "relationships": gist.relationships,
                 },
             )
             for gist in retained_gists

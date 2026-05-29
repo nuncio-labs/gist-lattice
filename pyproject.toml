@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gistlattice"
-version = "0.2.3"
+version = "1.2.4"
 description = "GistLattice is a memory-augmented Python library with episodic recall, semantic state, and durable consolidation."
 readme = "README.md"
 requires-python = ">=3.12"

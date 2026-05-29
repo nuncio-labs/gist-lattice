@@ -79,7 +79,8 @@ class InMemoryStorageProvider(StorageProvider):
                     importance=record["importance"],
                     score=score,
                     raw_text=record["gist"],  # fallback to gist
-                    last_accessed=now
+                    last_accessed=now,
+                    relationships=record.get("relationships", {})
                 ))
             return results
 

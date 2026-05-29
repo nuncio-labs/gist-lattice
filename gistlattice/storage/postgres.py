@@ -120,13 +120,32 @@ class PostgresStorageProvider(StorageProvider):
             # pgvector's <=> operator represents cosine distance. We want highest similarity, so smallest distance.
             rows = await conn.fetch("""
                 SELECT 
-                    gist, valence, importance, last_accessed, 
+                    id, gist, valence, importance, last_accessed, 
                     1 - (embedding <=> $1::vector) AS cosine_similarity
                 FROM memory_chunks
                 WHERE tenant_id = $2 AND user_id = $3
                 ORDER BY embedding <=> $1::vector ASC
                 LIMIT $4
             """, embedding_str, tenant_id, user_id, limit)
+            
+            if not rows:
+                return []
+                
+            chunk_ids = [row['id'] for row in rows]
+            
+            rel_rows = await conn.fetch("""
+                SELECT me.memory_id, me.relationship_type, e.name
+                FROM memory_entities me
+                JOIN entities e ON me.entity_id = e.id
+                WHERE me.memory_id = ANY($1)
+            """, chunk_ids)
+            
+            rels_by_id = {}
+            for r in rel_rows:
+                mem_id = r['memory_id']
+                if mem_id not in rels_by_id:
+                    rels_by_id[mem_id] = {}
+                rels_by_id[mem_id][r['relationship_type']] = r['name']
             
             results = []
             for row in rows:
@@ -135,7 +154,8 @@ class PostgresStorageProvider(StorageProvider):
                     valence=row['valence'],
                     importance=row['importance'],
                     score=row['cosine_similarity'],
-                    last_accessed=row['last_accessed']
+                    last_accessed=row['last_accessed'],
+                    relationships=rels_by_id.get(row['id'], {})
                 ))
             return results
 

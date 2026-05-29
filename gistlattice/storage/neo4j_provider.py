@@ -95,11 +95,13 @@ class Neo4jStorageProvider(StorageProvider):
         CALL db.index.vector.queryNodes('memory_vector_index', $limit, $query_vector)
         YIELD node AS m, score
         WHERE m.tenant_id = $tenant_id AND m.user_id = $user_id
+        OPTIONAL MATCH (m)-[r]->(e:Entity)
         RETURN m.gist AS gist, 
                m.valence AS valence, 
                m.importance AS importance, 
                score, 
-               m.last_accessed AS last_accessed
+               m.last_accessed AS last_accessed,
+               collect([type(r), e.name]) AS relationships
         """
         results = []
         async with self._driver.session() as session:
@@ -114,12 +116,19 @@ class Neo4jStorageProvider(StorageProvider):
                     else:
                         last_accessed = _now()
                         
+                    rels_raw = record.get("relationships", [])
+                    relationships = {}
+                    for rel in rels_raw:
+                        if rel and len(rel) == 2 and rel[0] and rel[1]:
+                            relationships[rel[0]] = rel[1]
+                            
                     results.append(MemoryGist(
                         gist=record["gist"],
                         valence=record["valence"],
                         importance=record["importance"],
                         score=record["score"],
-                        last_accessed=last_accessed
+                        last_accessed=last_accessed,
+                        relationships=relationships
                     ))
             except Exception as e:
                 # If vector index fails (e.g. wrong dimension config), return empty.

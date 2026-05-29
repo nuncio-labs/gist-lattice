@@ -52,6 +52,7 @@ class MemoryGist(BaseModel):
     score: float = 0.0
     raw_text: str | None = None
     last_accessed: datetime | None = None
+    relationships: dict[str, str] = Field(default_factory=dict)
 
 
 class SemanticContextItem(BaseModel):
