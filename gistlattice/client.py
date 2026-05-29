@@ -16,10 +16,18 @@ class GistLattice:
     A high-level client for easy interaction with the memory layer.
     """
 
-    def __init__(self, provider: str = "openai", tenant_id: str = "default", user_id: str = "default", **kwargs: Any) -> None:
+    def __init__(self, provider: str | None = None, tenant_id: str = "default", user_id: str = "default", **kwargs: Any) -> None:
         self.tenant_id = tenant_id
         self.user_id = user_id
-        settings = Settings(llm_provider=provider, **kwargs)
+        
+        settings_dict = Settings.from_env().model_dump()
+        if provider is not None:
+            settings_dict["llm_provider"] = provider
+        elif settings_dict.get("llm_provider") is None:
+            settings_dict["llm_provider"] = "openai"
+            
+        settings_dict.update(kwargs)
+        settings = Settings(**settings_dict)
         self.service = build_default_service(settings)
         
         # Initialize the Buffer Store based on the configured queue backend
@@ -32,6 +40,7 @@ class GistLattice:
         self.memory_buffer = MemoryBufferController(
             worker_callback=self._handle_buffer_flush,
             store=buffer_store,
+            max_messages=self.service.container.settings.buffer_size,
             use_embeddings=self.service.container.settings.use_semantic_buffer
         )
         
